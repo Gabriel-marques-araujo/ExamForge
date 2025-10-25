@@ -1,0 +1,15 @@
+# Virtual environments
+venv/
+.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Chroma vector database
+chroma_db/
+chroma/
+
+# Documentos
+Documentos/
