@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-dotenv
+google-generativeai
+langchain
+langchain-community
+langchain-chroma
+langchain-huggingface
+unstructured
