@@ -1,0 +1,121 @@
+.files-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 30%;
+    background-color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    border-radius: 30px;
+    flex-direction: column;
+    padding: 1.5rem;
+    border: #1D2234 0.5px solid;
+}
+
+.title-modal{
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #1D2234;
+    font-family: inter, sans-serif;
+    margin-bottom: 0.3rem;
+}
+
+.button-close{
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    display: flex; 
+    align-items: center;
+    justify-content: center;
+}
+
+.close-button-container {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
+}
+
+.subtitle-modal{
+    font-size: 1rem;
+    font-weight: 500;
+    color: #535862;
+    font-family: inter, sans-serif;
+    margin-bottom: 1rem;
+}
+
+.upload-area{
+    border: #E9EAEB 0.5px solid;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
+    border-radius: 20px;
+    cursor: pointer;
+}
+
+.upload-icon{
+    margin-top: 1rem;
+}
+
+.upload-text{
+    font-size: 1rem;
+    font-weight: 400;
+    color: #535862;
+    font-family: inter, sans-serif;
+    margin-top: 0.8rem;
+}
+
+.browse-link{
+    font-size: 1rem;
+    font-weight: 600;
+    color: #E64756;
+    font-family: inter, sans-serif;
+    text-decoration: none;
+}
+
+.file-types-text{
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: #535862;
+    font-family: inter, sans-serif;
+    margin-bottom: 1rem;
+}
+
+.footer-modal{
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+    gap: 1rem;
+}
+
+.cancel-button{
+    background-color: #FFFFFF;
+    font-family: inter, sans-serif;
+    font-weight: 600;
+    color: #1D2234;
+    width: 100%;
+    border-radius: 8px;
+    border: #E9EAEB 1px solid;
+    cursor: pointer;
+    padding: 0.8rem;
+}
+
+.attach-button{
+    background-color: #E64756;
+    font-family: inter, sans-serif;
+    font-weight: 600;
+    color: #ffffff;
+    width: 100%;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    padding: 0.8rem;
+}

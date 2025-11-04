@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import './App.css'
-import NavBar from './NavBar/NavBar'
+import NavBar from './Components/NavBar/NavBar'
+import FilesModal from './Components/FilesModal/FilesModal'
 
 function App() {
+  const [isFilesModalOpen, setIsFilesModalOpen] = useState(false)
 
   return (
     <>
-      <NavBar />
-      <main>
+      <NavBar className={isFilesModalOpen ? 'blur' : ''}/>
+      <main className={isFilesModalOpen ? 'blur' : ''}>
         <div className="container">
           <div className="text-area">
             <div className='title'>Crie Simulados com</div>
@@ -25,10 +27,11 @@ function App() {
                 />
           </div>
         </div>
-        <button className="start-button">
+        <button className="start-button" onClick={() => setIsFilesModalOpen(true)}>
           CRIE SEU SIMULADO AGORA!
         </button>
       </main>
+      {isFilesModalOpen && <FilesModal onClose={() => setIsFilesModalOpen(false)} />}
     </>
   )
 }

@@ -8,6 +8,11 @@
   margin: 0;
 }
 
+.blur {
+    filter: blur(5px);
+    transition: filter 0.2s ease;
+}
+
 .text-area {
   max-width: 39vw;
   margin: 0;

@@ -3,9 +3,13 @@ import React from "react";
 
 // falta implementar o on click do modo escuro
 
-const NavBar = () => {
+interface NavBarProps {
+    className?: string;
+}
+
+const NavBar: React.FC<NavBarProps> = ({ className }) => {
   return (
-    <header className="navbar">
+    <header className={`navbar ${className}`}>
         <div className="navbar-list">
             <div className="navbar-title">
                 <div className="navbar-title">
