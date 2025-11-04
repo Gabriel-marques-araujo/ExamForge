@@ -1,0 +1,61 @@
+.container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  padding: 0;
+  margin: 0;
+}
+
+.text-area {
+  max-width: 39vw;
+  margin: 0;
+  padding: 5rem 6rem 7rem 2rem;
+  text-align: flex-start;
+  color: #1D2234;
+  font-family: inter, sans-serif;
+}
+
+.title {
+  font-size: 3.45rem;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+}
+
+.title2 {
+  font-size: 3.5rem;
+  font-weight: 600;
+  margin-bottom: 0.8rem;
+  color: #E64756;
+}
+
+.subtitle {
+  font-size: 1.5rem;
+  font-weight: 400;
+  margin-bottom: 1rem;
+  max-width: 30vw;
+}
+
+.image-area {
+  padding: 5rem 2rem 7rem 6rem;
+}
+
+.books-image {
+  height: 35rem;
+}
+
+.start-button{
+  background-color: #E64756;
+  margin: 0 40%;
+  font-family: inter, sans-serif;
+  font-weight: 600;
+  color: #ffffff;
+  padding: 1.3rem 2.5rem;
+  border-radius: 20px;
+}
+
+.start-button:hover{
+  background-color: #b93946;
+  transform: scale(1.05);
+}
