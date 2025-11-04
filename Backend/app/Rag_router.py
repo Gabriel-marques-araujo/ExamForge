@@ -72,27 +72,54 @@ def get_gemini_response(prompt: str, temperature: float = 0.5):
 # GERAÇÃO DE QUESTÕES DE MÚLTIPLA ESCOLHA (RAG)
 
 
-def generate_mcq_from_context(context: str, topic: str, temperature: float = 0.5):
-    """Gera uma questão de múltipla escolha com base no contexto."""
+def generate_mcq_from_context(context: str, topic: str, qnt_questoes=2, temperature: float = 0.5):
+    """Gere questões de múltipla escolha com base no contexto. O número de questões gerada será enviado pelo usuário na variável qnt_questoes, 
+    por padrão, faça 2 questões"""
     prompt = f"""
-    Você é um especialista no tema: {topic}.
+    Você é um especialista no(s) tema(s): {topic}.
+    Gere um total de {qnt_questoes} questões sobre o(s) tema(s).
+    É importante que você gere um número igual de questões por temas.
     Com base EXCLUSIVA no contexto abaixo, gere uma questão de múltipla escolha com 4 alternativas (A, B, C, D),
-    sendo somente uma correta.
+    sendo somente uma correta. Desenvolva a resolução levando em consideração que o usuário não sabe do "contexto".
+    Deixe a resolução mais didática e detalhada
 
     ⚠️ Responda em JSON válido, sem texto adicional, sem explicação antes ou depois.
     Exemplo:
     {{
-    "question": "Texto da questão",
-    "options": [
-        {{"option": "Alternativa 1", "is_correct": true/false}},
-        {{"option": "Alternativa 2", "is_correct": true/false}},
-        {{"option": "Alternativa 3", "is_correct": true/false}},
-        {{"option": "Alternativa 4", "is_correct": true/false}}
-    ]
+    "question 1": {{
+        "text": "Texto da questão 1",
+        "options": [
+            {{"option": "Alternativa 1", "is_correct": true}},
+            {{"option": "Alternativa 2", "is_correct": false}},
+            {{"option": "Alternativa 3", "is_correct": false}},
+            {{"option": "Alternativa 4", "is_correct": false}}
+        ],
+        "resolution": "Texto explicando a alternativa correta"
+    }},
+    "question 2": {{
+        "text": "Texto da questão 2",
+        "options": [
+            {{"option": "Alternativa 1", "is_correct": false}},
+            {{"option": "Alternativa 2", "is_correct": true}},
+            {{"option": "Alternativa 3", "is_correct": false}},
+            {{"option": "Alternativa 4", "is_correct": false}}
+        ],
+        "resolution": "Texto explicando a alternativa correta"
+    }},
+    "question 3": {{
+        "text": "Texto da questão 3",
+        "options": [
+            {{"option": "Alternativa 1", "is_correct": false}},
+            {{"option": "Alternativa 2", "is_correct": false}},
+            {{"option": "Alternativa 3", "is_correct": true}},
+            {{"option": "Alternativa 4", "is_correct": false}}
+        ],
+        "resolution": "Texto explicando a alternativa correta"
+    }}
     }}
 
     Se o contexto não contiver informação suficiente, retorne:
-    {{"question": "Não há dados suficientes para gerar questão.", "options": []}}
+    {{"question": "Não há dados suficientes para gerar questões.", "options": []}}
 
     Contexto:
     {context}
@@ -143,6 +170,7 @@ def explain_answer(topic: str, question: str, chosen_option: str, correct_option
 
 class MCQRequest(BaseModel):
     topic: str
+    qnt_questoes : int
 
 
 class CheckAnswerRequest(BaseModel):
@@ -167,7 +195,7 @@ def generate_mcq(data: MCQRequest):
         return JSONResponse(status_code=404, content={"error": "Nenhum documento relevante encontrado."})
 
     context = format_docs(relevant_docs)
-    mcq = generate_mcq_from_context(context, data.topic, temperature=0.5)
+    mcq = generate_mcq_from_context(context, data.topic,data.qnt_questoes, temperature=0.5)
     mcq["sources"] = [doc.metadata.get("source", "Desconhecida") for doc in relevant_docs]
     return mcq
 
