@@ -1,0 +1,52 @@
+.navbar{
+    width: 100vw;
+    background: #FFFFFF;
+    position: fixed;
+    margin: 0;
+    padding: 0;
+    top:0;
+}
+
+.navbar-list{
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.navbar-title{
+    padding: 0.8rem 0 0 1rem;
+}
+
+.navbar-logo{
+    height: 2.4rem;
+}
+
+.dark-mode-toggle{
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin: 0.4rem 2rem 0 0;
+    display: flex; 
+    align-items: center;
+    justify-content: center;
+}
+
+.dark-mode-toggle img {
+  object-fit: contain;
+  transition: transform 0.2s ease;
+}
+
+.dark-mode-toggle:focus {
+  outline: none !important;
+}
+
+.dark-mode-toggle:focus-visible {
+  outline: none !important ;
+}
+.dark-mode-toggle:hover img {
+  transform: scale(1.1);
+}
+.navbar-mode{
+    height: 2.5rem;
+}
