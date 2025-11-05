@@ -126,7 +126,11 @@ const FilesModal: React.FC<FilesModalProps> = ({ onClose, onNext }) => {
             <div key={index} className="uploaded-file">
               <div className="file-row">
                 <div className="file-icon">
-                  <img src="/file-icon.svg" alt="Arquivo" />
+                  {f.progress < 100 ? (
+                    <img src="/file-upload-icon2.svg" alt="Arquivo" />
+                  ) : (
+                    <img src="/file-upload-icon.svg" alt="Arquivo" />
+                  )}
                 </div>
 
                 <div className="file-info">
@@ -136,10 +140,10 @@ const FilesModal: React.FC<FilesModalProps> = ({ onClose, onNext }) => {
 
                 {f.progress < 100 ? (
                   <button className="remove-file" onClick={() => handleRemoveFile(index)}>
-                    <img src="/trash-icon.svg" alt="Cancelar upload" />
+                    <img src="/trash.svg" alt="Cancelar upload" />
                   </button>
                 ) : (
-                  <img src="/check-icon.svg" alt="Upload concluído" className="check-icon" />
+                  <img src="/check.svg" alt="Upload concluído" className="check-icon" />
                 )}
               </div>
 
