@@ -18,7 +18,7 @@
   margin: 0;
   padding: 5rem 6rem 7rem 2rem;
   text-align: flex-start;
-  color: #1D2234;
+  color: #ffffff;
   font-family: inter, sans-serif;
 }
 
@@ -50,17 +50,31 @@
   height: 35rem;
 }
 
-.start-button{
-  background-color: #E64756;
-  margin: 0 40%;
+.start-button {
+  background: linear-gradient(90deg, #E64756, #ff6b81);
+  color: #fff;
   font-family: inter, sans-serif;
-  font-weight: 600;
-  color: #ffffff;
-  padding: 1.3rem 2.5rem;
-  border-radius: 20px;
+  font-weight: 700;
+  letter-spacing: .5px;
+
+  padding: 1.4rem 3rem;     
+  border-radius: 50px;      
+  font-size: 2.25rem;       
+
+  border: none;
+  cursor: pointer;
+  display: block;
+  margin: 2rem auto 0;      
+  
+  width: fit-content;       
+  transition: transform .2s ease, box-shadow .2s ease;
 }
 
-.start-button:hover{
-  background-color: #b93946;
-  transform: scale(1.05);
+.start-button:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0px 12px 28px rgba(230, 71, 86, 0.35);
+}
+
+.start-button:active {
+  transform: scale(0.97);
 }
