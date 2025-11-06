@@ -3,6 +3,7 @@
   flex-direction: column;
   gap: 3.0rem;
   margin-top: 1rem;
+  width: 100%;
 }
 
 .config-row {
@@ -51,7 +52,7 @@
 }
 
 .input-with-buttons input {
-  width: 590px;
+  width: 100%;
   text-align: center;
   border: 1px solid #E9EAEB;
   border-radius: 10px;
