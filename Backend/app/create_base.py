@@ -36,6 +36,10 @@ os.environ["GOOGLE_API_KEY"] = GEMINI_KEY
 
 @router.post("/upload/")
 async def upload_file(file: UploadFile = File(...)):
+
+    """Recebe um arquivo e salva localmente em ./Documentos"""
+
+
     os.makedirs(DOCUMENTS_PATH, exist_ok=True)
     file_path = os.path.join(DOCUMENTS_PATH, file.filename)
     with open(file_path, "wb") as f:
@@ -45,6 +49,9 @@ async def upload_file(file: UploadFile = File(...)):
 
 @router.post("/create/")
 def create_vector_database():
+
+    """Cria a base de dados com os arquivos em ./Documentos"""
+
     if not os.path.exists(DOCUMENTS_PATH):
         return JSONResponse(status_code=400, content={"error": "Nenhum diretório 'documentos' encontrado."})
 
@@ -87,7 +94,6 @@ def create_vector_database():
         api_key=GEMINI_KEY
       
     )
-
     
     db = Chroma.from_documents(
         documents,
@@ -102,6 +108,9 @@ def create_vector_database():
 
 @router.get("/status/")
 def status():
+    
+    """Status do ./Documentos"""
+
     total_docs = len(os.listdir(DOCUMENTS_PATH)) if os.path.exists(DOCUMENTS_PATH) else 0
     return {
         "status": "ok",
