@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axios from "axios";
 import "./FilesModal.css";
 
 interface FilesModalProps {
@@ -66,6 +67,26 @@ const FilesModal: React.FC<FilesModalProps> = ({ onClose, onNext }) => {
           return updatedFiles;
         });
       }, 100);
+    });
+
+    newFiles.forEach(async(f) =>{
+      const formData = new FormData();
+      formData.append("file",f.file);
+
+      try{
+
+        await axios.post("http://localhost:8000/base/upload/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      console.log('Upload concluido para ${f.file.name}');
+
+      await axios.post("http://localhost:8000/base/create/");
+      console.log('Vetorização inciada para ${f.file.name}');
+      }catch(error){
+       console.error("Erro ao enviar arquivo:", error);
+       setErrorMessage(`Erro ao enviar "${f.file.name}"`);
+      }
     });
 
     setTimeout(() => setErrorMessage(""), 3000);
