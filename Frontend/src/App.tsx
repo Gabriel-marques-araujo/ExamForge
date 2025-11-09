@@ -48,7 +48,6 @@ function App() {
         />
       )}
 
-      {/* Modal de configuração do questionário */}
       {isQuestionnaireModalOpen && (
         <QuestionnaireModal
           initialFiles={uploadedFiles}

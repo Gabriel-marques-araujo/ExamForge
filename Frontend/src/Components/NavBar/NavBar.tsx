@@ -1,33 +1,45 @@
 import "./NavBar.css";
-import React from "react";
-
-// falta implementar o on click do modo escuro
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface NavBarProps {
-    className?: string;
+  className?: string;
 }
 
 const NavBar: React.FC<NavBarProps> = ({ className }) => {
+  const navigate = useNavigate(); // hook para navegar
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem("theme") === "dark";
+  });
+
+  useEffect(() => {
+    document.body.classList.toggle("dark", darkMode);
+    localStorage.setItem("theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
+
   return (
-    <header className={`navbar ${className}`}>
-        <div className="navbar-list">
-            <div className="navbar-title">
-                <div className="navbar-title">
-                    <img
-                    src="/title.svg"
-                    alt="ExamForge"
-                    className="navbar-logo"
-                    />
-                </div>
-            </div>
-            <button className="dark-mode-toggle">                    
-                <img
-                    src="/darkmode.svg"
-                    alt="dark mode"
-                    className="navbar-mode"
-                />
-            </button>
-        </div>    
+    <header className={`navbar ${className || ""}`}>
+      <div className="navbar-list">
+        <div
+          className="navbar-title"
+          style={{ cursor: "pointer" }}
+          onClick={() => navigate("/")} // vai para a página inicial ao clicar
+        >
+          <img src="/title.svg" alt="ExamForge" className="navbar-logo" />
+        </div>
+
+        <button
+          className="dark-mode-toggle"
+          onClick={() => setDarkMode(!darkMode)}
+          aria-label="Alternar modo escuro"
+        >
+          <img
+            src={darkMode ? "/sun.svg" : "/darkmode.svg"}
+            alt={darkMode ? "Modo claro" : "Modo escuro"}
+            className="navbar-mode"
+          />
+        </button>
+      </div>
     </header>
   );
 };

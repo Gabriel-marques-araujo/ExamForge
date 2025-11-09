@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./QuestionnaireModal.css";
+import { useNavigate } from "react-router-dom";
 
 interface QuestionnaireModalProps {
   onClose: () => void;
@@ -11,6 +12,8 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
   const [numQuestions, setNumQuestions] = useState(1);
   const [timeMinutes, setTimeMinutes] = useState(10);
   const [instructions, setInstructions] = useState("");
+  const navigate = useNavigate(); 
+
 
   const MAX_QUESTIONS = 15;
   const MAX_TIME = 120;
@@ -94,7 +97,7 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
         <button className="cancel-button" onClick={onBack}>Voltar</button>
         <button
           className="attach-button"
-          onClick={() => alert(`Criar ${numQuestions} questões com ${timeMinutes} minutos!\nInstruções: ${instructions}`)}
+          onClick={() => navigate("/questions", { state: { numQuestions, timeMinutes, instructions, initialFiles } })}
         >
           Criar
         </button>
