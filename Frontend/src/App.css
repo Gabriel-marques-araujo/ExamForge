@@ -52,6 +52,13 @@ main.blur::after,
   margin-bottom: 0.2rem;
 }
 
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+
 .title2 {
   font-size: 3.5rem;
   font-weight: 700;

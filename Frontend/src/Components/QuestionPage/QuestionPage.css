@@ -1,7 +1,7 @@
 body {
   margin: 0;
   font-family: "Inter", sans-serif;
-  background-color: #f5f6fa;
+  background-color: #DBDBDB;
 }
 
 .questions-container {
@@ -13,6 +13,102 @@ body {
   background-color: #f5f6fa;
   box-sizing: border-box;
   padding: 6rem 0.2rem 0.2rem;
+}
+
+.question-header-with-timer {
+  display: flex;
+  align-items: stretch; 
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.question-header-with-timer .question-header {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; 
+}
+
+.question-header-with-timer .timer-circle {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; 
+  align-items: center;
+  height: 100%;
+}
+
+.warning-text {
+  color: #e64756;
+  font-weight: 500;
+  margin-top: 10px;
+  text-align: left;
+  font-size: 1rem;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.question-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.question-header {
+  flex: 1;
+}
+
+.warning-text {
+  color: #e64756;
+  font-weight: 500;
+  margin-top: 8px;
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.timer-circle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.timer-text {
+  margin-top: 4px;
+  font-weight: bold;
+  color: #e64756;
+}
+
+.question-header-with-timer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.warning-text {
+  color: #e64756;
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24px;
+}
+
+.warning-text {
+  color: #e64756;
+  font-weight: 500;
+  margin-top: 8px;
+  text-align: center;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .timer {
@@ -59,6 +155,42 @@ body {
   font-size: 1rem;
   font-weight: 700;
   color: #1d2234;
+}
+
+.actions.first-question {
+  justify-content: flex-end;
+}
+
+.floating-timer {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 90px;
+  height: 90px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  transition: transform 0.3s ease;
+}
+
+.floating-timer:hover {
+  transform: scale(1.08);
+}
+
+.floating-timer .progress-ring {
+  transform: rotate(-90deg);
+}
+
+.floating-timer .timer-text {
+  position: absolute;
+  font-weight: bold;
+  color: #e64756;
+  font-size: 1rem;
 }
 
 .time-over-modal {

@@ -4,26 +4,32 @@ import { useNavigate } from "react-router-dom";
 
 interface QuestionnaireModalProps {
   onClose: () => void;
-  onBack: () => void; 
+  onBack: () => void;
   initialFiles: File[];
 }
 
 const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack, initialFiles }) => {
+  const navigate = useNavigate();
+
   const [numQuestions, setNumQuestions] = useState(1);
   const [timeMinutes, setTimeMinutes] = useState(10);
   const [instructions, setInstructions] = useState("");
-  const navigate = useNavigate(); 
-
 
   const MAX_QUESTIONS = 15;
   const MAX_TIME = 120;
   const MAX_INSTRUCTIONS = 240;
 
-  const incrementQuestions = () => setNumQuestions(prev => (prev < MAX_QUESTIONS ? prev + 1 : prev));
-  const decrementQuestions = () => setNumQuestions(prev => (prev > 1 ? prev - 1 : 1));
+  const incrementQuestions = () => setNumQuestions(prev => Math.min(prev + 1, MAX_QUESTIONS));
+  const decrementQuestions = () => setNumQuestions(prev => Math.max(prev - 1, 1));
 
-  const incrementTime = () => setTimeMinutes(prev => (prev < MAX_TIME ? prev + 1 : prev));
-  const decrementTime = () => setTimeMinutes(prev => (prev > 1 ? prev - 1 : 1));
+  const incrementTime = () => setTimeMinutes(prev => Math.min(prev + 1, MAX_TIME));
+  const decrementTime = () => setTimeMinutes(prev => Math.max(prev - 1, 1));
+
+  const handleCreate = () => {
+    navigate("/questions", {
+      state: { numQuestions, timeMinutes, instructions, initialFiles },
+    });
+  };
 
   return (
     <div className="files-modal">
@@ -43,7 +49,18 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
           <label>Número de Questões:</label>
           <div className="input-with-buttons">
             <button className="circle-btn" onClick={decrementQuestions}>-</button>
-            <input type="number" value={numQuestions} readOnly />
+            <input
+              type="number"
+              value={numQuestions}
+              onChange={(e) => {
+                let value = Number(e.target.value);
+                if (value < 1) value = 1;
+                if (value > MAX_QUESTIONS) value = MAX_QUESTIONS;
+                setNumQuestions(value);
+              }}
+              min="1"
+              max={MAX_QUESTIONS}
+            />
             <button className="circle-btn" onClick={incrementQuestions}>+</button>
           </div>
           <div className="max-info">Máximo de {MAX_QUESTIONS} questões por simulado</div>
@@ -53,7 +70,18 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
           <label>Tempo Limite (minutos):</label>
           <div className="input-with-buttons">
             <button className="circle-btn" onClick={decrementTime}>-</button>
-            <input type="number" value={timeMinutes} readOnly />
+            <input
+              type="number"
+              value={timeMinutes}
+              onChange={(e) => {
+                let value = Number(e.target.value);
+                if (value < 1) value = 1;
+                if (value > MAX_TIME) value = MAX_TIME;
+                setTimeMinutes(value);
+              }}
+              min="1"
+              max={MAX_TIME}
+            />
             <button className="circle-btn" onClick={incrementTime}>+</button>
           </div>
           <div className="max-info">Máximo de {MAX_TIME} minutos por simulado</div>
@@ -81,13 +109,15 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
             }}
             maxLength={MAX_INSTRUCTIONS}
           />
-          <div style={{
-            textAlign: "right",
-            fontSize: "0.75rem",
-            color: instructions.length > MAX_INSTRUCTIONS ? "#E64756" : "#535862",
-            marginTop: "0.25rem",
-            fontFamily: "inter, sans-serif"
-          }}>
+          <div
+            style={{
+              textAlign: "right",
+              fontSize: "0.75rem",
+              color: "#535862",
+              marginTop: "0.25rem",
+              fontFamily: "inter, sans-serif",
+            }}
+          >
             {instructions.length}/{MAX_INSTRUCTIONS} caracteres
           </div>
         </div>
@@ -95,12 +125,7 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
 
       <div className="footer-modal" style={{ marginTop: "2rem" }}>
         <button className="cancel-button" onClick={onBack}>Voltar</button>
-        <button
-          className="attach-button"
-          onClick={() => navigate("/questions", { state: { numQuestions, timeMinutes, instructions, initialFiles } })}
-        >
-          Criar
-        </button>
+        <button className="attach-button" onClick={handleCreate}>Criar</button>
       </div>
     </div>
   );

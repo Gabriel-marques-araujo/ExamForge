@@ -10,7 +10,7 @@ interface Question {
 }
 
 interface LocationState {
-  timeMinutes: number; 
+  timeMinutes: number;
 }
 
 const QuestionsPage: React.FC = () => {
@@ -21,8 +21,9 @@ const QuestionsPage: React.FC = () => {
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: string }>({});
-  const [timeLeft, setTimeLeft] = useState(timeMinutes * 60); // transforma minutos em segundos
+  const [timeLeft, setTimeLeft] = useState(timeMinutes * 60);
   const [isTimeOver, setIsTimeOver] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
 
   useEffect(() => {
     if (timeLeft <= 0) {
@@ -97,65 +98,114 @@ const QuestionsPage: React.FC = () => {
 
       <div className="questions-container">
         <div className="question-card">
-          <div className="timer-circle">
-            <svg className="progress-ring" width="80" height="80">
-              <circle className="progress-ring__circle-bg" stroke="#e0e0e0" strokeWidth="8" fill="transparent" r="36" cx="40" cy="40" />
-              <circle
-                className="progress-ring__circle"
-                stroke="#e64756"
-                strokeWidth="8"
-                fill="transparent"
-                r="36"
-                cx="40"
-                cy="40"
-                strokeDasharray={2 * Math.PI * 36}
-                strokeDashoffset={2 * Math.PI * 36 * (1 - timeLeft / (timeMinutes * 60))}
-              />
-            </svg>
-            <div className="timer-text">{formatTime(timeLeft)}</div>
-          </div>
-
-          {/* --- BARRA DE PROGRESSO --- */}
+          {/* Barra de progresso */}
           <div className="progress-bar">
             <div className="progress" style={{ width: `${progress}%` }} />
           </div>
 
-          <div className="question-header">
-            <div className="question-number">{currentQuestion.id}</div>
-            <p className="question-text">{currentQuestion.enunciado}</p>
+          <div className="question-header-with-timer">
+            <div className="question-header">
+              <div className="question-number">{currentQuestion.id}</div>
+              <p className="question-text">{currentQuestion.enunciado}</p>
+
+              {showWarning && (
+                <p className="warning-text">⚠️ Selecione uma alternativa para continuar.</p>
+              )}
+            </div>
+
+            {/* Relógio flutuante no canto da tela */}
+<div className="floating-timer">
+  <svg className="progress-ring" width="80" height="80">
+    <circle
+      className="progress-ring__circle-bg"
+      stroke="#e0e0e0"
+      strokeWidth="8"
+      fill="transparent"
+      r="36"
+      cx="40"
+      cy="40"
+    />
+    <circle
+      className="progress-ring__circle"
+      stroke="#e64756"
+      strokeWidth="8"
+      fill="transparent"
+      r="36"
+      cx="40"
+      cy="40"
+      strokeDasharray={2 * Math.PI * 36}
+      strokeDashoffset={2 * Math.PI * 36 * (timeLeft / (timeMinutes * 60))}
+    />
+  </svg>
+  <div className="timer-text">{formatTime(timeLeft)}</div>
+</div>
+
           </div>
 
           <div className="options">
             {currentQuestion.alternativas.map((alt, idx) => (
               <label
                 key={idx}
-                className={`option-box ${selectedAnswers[currentQuestion.id] === alt ? "selected" : ""}`}
+                className={`option-box ${
+                  selectedAnswers[currentQuestion.id] === alt ? "selected" : ""
+                }`}
                 onClick={() => handleSelect(currentQuestion.id, alt)}
               >
-                <input type="radio" name={`question-${currentQuestion.id}`} value={alt} checked={selectedAnswers[currentQuestion.id] === alt} onChange={() => handleSelect(currentQuestion.id, alt)} style={{ display: "none" }} />
+                <input
+                  type="radio"
+                  name={`question-${currentQuestion.id}`}
+                  value={alt}
+                  checked={selectedAnswers[currentQuestion.id] === alt}
+                  onChange={() => handleSelect(currentQuestion.id, alt)}
+                  style={{ display: "none" }}
+                />
                 {alt}
               </label>
             ))}
           </div>
 
-          <div className="actions">
-            <button className="back-button" onClick={handleBack} disabled={currentQuestionIndex === 0}>
-              Voltar
-            </button>
-            {currentQuestionIndex < questions.length - 1 ? (
-              <button className="next-button" onClick={handleNext}>
-                Próxima
-              </button>
-            ) : (
-              <button className="submit-button" onClick={handleNext}>
-                Finalizar Simulado
-              </button>
-            )}
-          </div>
+        {/* Ações (botões) */}
+<div className={`actions ${currentQuestionIndex === 0 ? "first-question" : ""}`}>
+  {currentQuestionIndex > 0 && (
+    <button className="back-button" onClick={handleBack}>
+      Voltar
+    </button>
+  )}
+
+  {currentQuestionIndex < questions.length - 1 ? (
+    <button
+      className="next-button"
+      onClick={() => {
+        if (!selectedAnswers[currentQuestion.id]) {
+          setShowWarning(true);
+          return;
+        }
+        setShowWarning(false);
+        handleNext();
+      }}
+    >
+      Próxima
+    </button>
+  ) : (
+    <button
+      className="submit-button"
+      onClick={() => {
+        if (!selectedAnswers[currentQuestion.id]) {
+          setShowWarning(true);
+          return;
+        }
+        setShowWarning(false);
+        handleNext();
+      }}
+    >
+      Finalizar Simulado
+    </button>
+  )}
+</div>
+
         </div>
       </div>
 
-      {/* --- MODAL DE TEMPO ESGOTADO --- */}
       {isTimeOver && (
         <div className="time-over-modal">
           <div className="time-over-content">
