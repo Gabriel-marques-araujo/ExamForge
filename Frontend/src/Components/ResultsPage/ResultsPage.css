@@ -1,86 +1,155 @@
-.results-container {
-  height: 100vh;
-  width: 100vw;
-  background-color: #f5f6fa;
+.results-wrapper {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  padding-top: 6rem; /* espaço pra navbar */
-  box-sizing: border-box;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #f8f8f8;
+  padding: 2rem;
 }
 
-.results-card {
-  background-color: #fff;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  padding: 3rem 4rem;
-  max-width: 500px;
-  width: 90%;
+/* === Quadro principal da nota === */
+.score-section {
+  background-color: #e64756;
+  width: 900px;
+  padding: 3rem 0 5rem;
+  border-radius: 18px;
+  position: relative;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
   text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  color: #fff;
 }
 
-.results-title {
-  font-size: 1.8rem;
-  font-weight: 600;
-  color: #333;
-}
-
-.results-score {
-  font-size: 4rem;
-  font-weight: 800;
-  color: #e64756;
-  margin: 1rem 0 2rem 0;
-}
-
-.results-summary,
-.results-details {
+.score-background {
   display: flex;
   justify-content: center;
-  gap: 3rem;
-  margin-top: 1rem;
+  align-items: center;
+  position: relative;
 }
 
-.results-summary h3,
-.results-details h3 {
-  font-size: 1.8rem;
-  color: #1d2234;
-}
-
-.results-summary p,
-.results-details p {
-  color: #666;
-  font-size: 0.95rem;
-}
-
-.results-actions {
+.score-circle {
+  background-color: #f06b78;
+  color: white;
+  font-size: 3rem;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
   display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-  width: 100%;
-  margin-top: 2rem;
+  justify-content: center;
+  align-items: center;
+  font-weight: 800;
+  position: relative;
+  z-index: 2;
+}
+
+.decor-circle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.2;
+  z-index: 1;
+}
+
+.circle1 {
+  width: 220px;
+  height: 220px;
+  background-color: #ffffff;
+}
+
+.circle2 {
+  width: 300px;
+  height: 300px;
+  background-color: #f8aab2;
+}
+
+.score-label {
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin-top: 1.2rem;
+}
+
+/* === Quadro das estatísticas === */
+.stats-section {
+  background-color: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+  padding: 1.8rem 2.5rem;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 420px;
+  position: relative;
+  top: -60px; /* faz a sobreposição */
+  z-index: 3;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  text-align: left;
+}
+
+.stat-card h3 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: #1d2234;
+  font-weight: 700;
+}
+
+.stat-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+
+.green-dot {
+  background-color: #2ecc71;
+}
+
+.red-dot {
+  background-color: #e64756;
+}
+
+/* === Botões === */
+.results-actions {
+  margin-top: -30px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
 }
 
 .action-button,
 .restart-button {
-  background-color: #e64756;
-  color: white;
+  padding: 0.9rem 1.8rem;
   border: none;
-  padding: 0.9rem;
   border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  font-weight: 600;
+  transition: all 0.2s ease-in-out;
 }
 
-.action-button:hover,
-.restart-button:hover {
-  transform: scale(1.05);
+.action-button {
+  background-color: #e64756;
+  color: white;
+}
+
+.action-button:hover {
+  background-color: #c43b48;
 }
 
 .restart-button {
-  background-color: #1d2234;
+  background-color: #fff;
+  color: #e64756;
+  border: 2px solid #e64756;
+}
+
+.restart-button:hover {
+  background-color: #ffe6e9;
 }
