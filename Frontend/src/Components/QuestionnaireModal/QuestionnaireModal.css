@@ -1,8 +1,51 @@
+.files-modal-2 {
+  position: fixed;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30%;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  border-radius: 30px;
+  padding: 1.5rem;
+  border: 0.1px solid #1D2234;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  max-height: 80vh;
+  overflow-y: auto;
+  
+}
+
+body.dark .files-modal-2{
+  background-color: #121212;
+}
+
+.files-modal-2::-webkit-scrollbar {
+    width: 8px; 
+}
+
+.files-modal-2::-webkit-scrollbar-track {
+    background: #f1f1f1; 
+    border-radius: 10px;
+    margin: 40px 0;
+}
+
+.files-modal-2::-webkit-scrollbar-thumb {
+    background-color: #E64756; 
+    border-radius: 10px; 
+    border: 1px solid #f1f1f1; 
+    min-height: 40px;
+}
+
+.files-modal-2::-webkit-scrollbar-thumb:hover {
+    background-color: #CC3D4D; 
+}
+
 .config-container {
   display: flex;
   flex-direction: column;
   gap: 3.0rem;
-  margin-top: 1rem;
+  margin-top: 0.5rem;
   width: 100%;
 }
 
@@ -51,6 +94,10 @@
   font-family: inter, sans-serif;
 }
 
+body.dark .config-row label{
+  color: #ffffff;
+}
+
 .input-with-buttons input {
   width: 100%;
   text-align: center;
@@ -61,6 +108,11 @@
   font-size: 1rem;
   color: #1D2234; 
   background-color: #fff;
+}
+
+body.dark .input-with-buttons input{
+  background-color: #212121;
+  color: #ffffff;
 }
 
 .instructions-textarea {
@@ -74,6 +126,11 @@
   resize: vertical;
   color: #1D2234;
   box-sizing: border-box;
+}
+
+body.dark .config-row textarea{
+  background-color: #212121;
+  color: #ffffff;
 }
 
 .instructions-textarea.error {
@@ -90,4 +147,23 @@
 
 .char-counter.error {
   color: #E64756;
+}
+
+@media (max-width: 1024px) {
+    .files-modal-2 {
+        padding: 1rem;
+        max-height: 70vh;
+        z-index: 1001;
+        overflow-y: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .files-modal-2 {
+        width: 80%;
+        padding: 1rem;
+        max-height: 75vh;
+        z-index: 1001;
+        overflow-y: scroll;
+    }
 }

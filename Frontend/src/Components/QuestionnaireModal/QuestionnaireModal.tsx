@@ -32,7 +32,7 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
   };
 
   return (
-    <div className="files-modal">
+    <div className="files-modal-2">
       <div className="close-button-container">
         <div className="title-modal">Configuração de Questionário</div>
         <button className="button-close" onClick={onClose}>
@@ -87,7 +87,7 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
           <div className="max-info">Máximo de {MAX_TIME} minutos por simulado</div>
         </div>
 
-        <div className="config-row" style={{ marginTop: "1rem" }}>
+        <div className="config-row">
           <label>Instruções para as questões:</label>
           <textarea
             value={instructions}
@@ -99,13 +99,11 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
               padding: "0.75rem",
               borderRadius: "12px",
               border: "1px solid #E9EAEB",
-              backgroundColor: "#FFFFFF",
               fontFamily: "inter, sans-serif",
               fontSize: "1rem",
               marginTop: "0.5rem",
-              resize: "vertical",
+              resize: "none",
               boxSizing: "border-box",
-              color: "#1D2234",
             }}
             maxLength={MAX_INSTRUCTIONS}
           />

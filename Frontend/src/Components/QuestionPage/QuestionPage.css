@@ -12,7 +12,11 @@ body {
   align-items: center;
   background-color: #f5f6fa;
   box-sizing: border-box;
-  padding: 6rem 0.2rem 0.2rem;
+  padding: 5rem 0.2rem 0.2rem;
+}
+
+body.dark .questions-container {
+  background-color: #121212;
 }
 
 .question-header-with-timer {
@@ -124,11 +128,12 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   min-width: 120px;
 }
+
 .timer-circle {
   position: relative;
   width: 80px;
   height: 80px;
-  margin: 0 auto 1.5rem;
+  margin: 0 auto 1rem;
 }
 
 .progress-ring {
@@ -138,6 +143,11 @@ body {
 .progress-ring__circle-bg {
   transform: rotate(0.25turn);
   transform-origin: 50% 50%;
+  stroke: #e0e0e0;
+}
+ 
+body.dark .progress-ring__circle-bg{
+  stroke: #;
 }
 
 .progress-ring__circle {
@@ -176,6 +186,10 @@ body {
   justify-content: center;
   z-index: 100;
   transition: transform 0.3s ease;
+}
+
+body.dark .floating-timer{
+  background-color:#212121;
 }
 
 .floating-timer:hover {
@@ -245,12 +259,16 @@ body {
   max-width: 1200px;
   background-color: #fff;
   border-radius: 18px;
-  padding: 3rem 4rem;
+  padding: 2rem 4rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   min-height: 80vh;
+}
+
+body.dark .question-card {
+  background-color: #212121;
 }
 
 .question-header {
@@ -284,6 +302,10 @@ body {
   min-width: 0;
 }
 
+body.dark .question-text{
+  color:#ffffff;
+}
+
 .options {
   margin-top: 2rem;
   display: flex;
@@ -305,8 +327,17 @@ body {
   font-size: 1.15rem;
 }
 
+body.dark .option-box{
+  background-color: #121212;
+  color:#ffffff;
+}
+
 .option-box:hover {
   border-color: #e64756;
+}
+
+body.dark .option-box.selected {
+  background-color: #e64756;
 }
 
 .option-box.selected {
