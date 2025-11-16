@@ -16,12 +16,10 @@
 }
 
 .review-wrapper {
-    /* Mantenha seus estilos de fundo e tamanho, e adicione este ajuste: */
-    padding-top: 80px; /* Aumente o padding superior (ex: 80px para uma nav de 60px) */
+    padding-top: 80px; 
     padding-left: 20px; 
     padding-right: 20px;
-    padding-bottom: 30px; /* Mantenha o padding inferior */
-    
+    padding-bottom: 30px; 
     background-color: var(--review-bg-color);
     min-height: 100vh;
     color: var(--review-text-color);
@@ -33,7 +31,7 @@
   margin: 0 auto 30px;
   display: flex;
   justify-content: space-around;
-  background-color: var(--review-card-bg); /* Usa cor do tema */
+  background-color: var(--review-card-bg); 
   border-radius: 12px;
   padding: 15px 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
