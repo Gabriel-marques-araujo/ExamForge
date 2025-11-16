@@ -7,17 +7,23 @@ interface Question {
   id: number;
   enunciado: string;
   alternativas: string[];
+  correctAnswer: string;
+  explicacao: string;
 }
 
 interface LocationState {
   timeMinutes: number;
+  instructions?: string; 
+  initialFiles?: File[];
 }
 
 const QuestionsPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { timeMinutes = 120 } = (location.state as LocationState) || {};
+  const state = location.state as LocationState | undefined;
+  const timeMinutes = state?.timeMinutes || 120;
+  const topic = state?.instructions || "Geral";
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: string }>({});
@@ -40,30 +46,32 @@ const QuestionsPage: React.FC = () => {
     return `${m}:${s}`;
   };
 
-  const questions: Question[] = [
-    {
-      id: 1,
-      enunciado: "O que é um caso de teste?",
-      alternativas: [
-        "A) Um defeito encontrado no sistema",
-        "B) Uma funcionalidade a ser desenvolvida",
-        "C) Um conjunto de condições para verificar um requisito",
-        "D) Um relatório de execução de teste",
-        "E) Uma métrica de cobertura de código",
-      ],
-    },
-    {
-      id: 2,
-      enunciado: "O que é teste de regressão?",
-      alternativas: [
-        "A) Teste realizado apenas na fase inicial do projeto",
-        "B) Teste feito para verificar se mudanças causaram falhas",
-        "C) Teste de performance em ambiente de produção",
-        "D) Teste exploratório feito por desenvolvedores",
-        "E) Nenhuma das alternativas",
-      ],
-    },
-  ];
+const questions: Question[] = [
+  {
+    id: 1,
+    enunciado: "O que é um caso de teste?",
+    alternativas: [
+      "A) Um defeito encontrado no sistema",
+      "B) Uma funcionalidade a ser desenvolvida",
+      "C) Um conjunto de condições para verificar um requisito",
+      "D) Um relatório de execução de teste",
+    ],
+    correctAnswer: "C) Um conjunto de condições para verificar um requisito",
+    explicacao: "Um caso de teste define condições necessárias para validar um requisito.",
+  },
+  {
+    id: 2,
+    enunciado: "O que é teste de regressão?",
+    alternativas: [
+      "A) Teste realizado apenas no início do projeto",
+      "B) Teste para verificar se alterações causaram falhas",
+      "C) Teste de performance em produção",
+      "D) Teste exploratório",
+    ],
+    correctAnswer: "B) Teste para verificar se alterações causaram falhas",
+    explicacao: "É executado após mudanças no sistema para garantir que nada foi quebrado.",
+  },
+];
 
   const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
@@ -89,7 +97,8 @@ const QuestionsPage: React.FC = () => {
         correctAnswers: 13,
         wrongAnswers: 7,
         questions: questions,         
-        userAnswers: selectedAnswers,  
+        userAnswers: selectedAnswers, 
+        topic, 
       },
     });
   };
@@ -100,12 +109,12 @@ const QuestionsPage: React.FC = () => {
 
       <div className="questions-container">
         <div className="question-card">
-          {/* Barra superior com tópico e timer */}
 <div className="top-info-bar">
-  <div className="topic-section">
-    <span className="label">Tópico:</span>
-    <span className="value">Geral</span>
-  </div>
+ <div className="topic-section">
+  <span className="label">Tópico:</span>
+  <span className="value">{topic}</span>
+</div>
+
 
   <div className="timer-section">
     <span className="label">Tempo Restante:</span>
@@ -113,8 +122,6 @@ const QuestionsPage: React.FC = () => {
   </div>
 </div>
 
-
-          {/* Barra de progresso */}
           <div className="progress-bar">
             <div className="progress" style={{ width: `${progress}%` }} />
           </div>
@@ -153,8 +160,6 @@ const QuestionsPage: React.FC = () => {
               </label>
             ))}
           </div>
-
-          {/* Botões */}
           <div className={`actions ${currentQuestionIndex === 0 ? "first-question" : ""}`}>
             {currentQuestionIndex > 0 && (
               <button className="back-button" onClick={handleBack}>
