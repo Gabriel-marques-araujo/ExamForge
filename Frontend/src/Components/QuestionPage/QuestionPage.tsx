@@ -88,6 +88,8 @@ const QuestionsPage: React.FC = () => {
         totalQuestions: questions.length,
         correctAnswers: 13,
         wrongAnswers: 7,
+        questions: questions,         
+        userAnswers: selectedAnswers,  
       },
     });
   };
@@ -98,12 +100,27 @@ const QuestionsPage: React.FC = () => {
 
       <div className="questions-container">
         <div className="question-card">
+          {/* Barra superior com tópico e timer */}
+<div className="top-info-bar">
+  <div className="topic-section">
+    <span className="label">Tópico:</span>
+    <span className="value">Geral</span>
+  </div>
+
+  <div className="timer-section">
+    <span className="label">Tempo Restante:</span>
+    <span className="value">{formatTime(timeLeft)}</span>
+  </div>
+</div>
+
+
           {/* Barra de progresso */}
           <div className="progress-bar">
             <div className="progress" style={{ width: `${progress}%` }} />
           </div>
 
           <div className="question-header-with-timer">
+
             <div className="question-header">
               <div className="question-number">{currentQuestion.id}</div>
               <p className="question-text">{currentQuestion.enunciado}</p>
@@ -112,33 +129,6 @@ const QuestionsPage: React.FC = () => {
                 <p className="warning-text">⚠️ Selecione uma alternativa para continuar.</p>
               )}
             </div>
-
-            {/* Relógio flutuante no canto da tela */}
-<div className="floating-timer">
-  <svg className="progress-ring" width="80" height="80">
-    <circle
-      className="progress-ring__circle-bg"
-      stroke="#e0e0e0"
-      strokeWidth="8"
-      fill="transparent"
-      r="36"
-      cx="40"
-      cy="40"
-    />
-    <circle
-      className="progress-ring__circle"
-      stroke="#e64756"
-      strokeWidth="8"
-      fill="transparent"
-      r="36"
-      cx="40"
-      cy="40"
-      strokeDasharray={2 * Math.PI * 36}
-      strokeDashoffset={2 * Math.PI * 36 * (timeLeft / (timeMinutes * 60))}
-    />
-  </svg>
-  <div className="timer-text">{formatTime(timeLeft)}</div>
-</div>
 
           </div>
 
@@ -164,44 +154,44 @@ const QuestionsPage: React.FC = () => {
             ))}
           </div>
 
-        {/* Ações (botões) */}
-<div className={`actions ${currentQuestionIndex === 0 ? "first-question" : ""}`}>
-  {currentQuestionIndex > 0 && (
-    <button className="back-button" onClick={handleBack}>
-      Voltar
-    </button>
-  )}
+          {/* Botões */}
+          <div className={`actions ${currentQuestionIndex === 0 ? "first-question" : ""}`}>
+            {currentQuestionIndex > 0 && (
+              <button className="back-button" onClick={handleBack}>
+                Voltar
+              </button>
+            )}
 
-  {currentQuestionIndex < questions.length - 1 ? (
-    <button
-      className="next-button"
-      onClick={() => {
-        if (!selectedAnswers[currentQuestion.id]) {
-          setShowWarning(true);
-          return;
-        }
-        setShowWarning(false);
-        handleNext();
-      }}
-    >
-      Próxima
-    </button>
-  ) : (
-    <button
-      className="submit-button"
-      onClick={() => {
-        if (!selectedAnswers[currentQuestion.id]) {
-          setShowWarning(true);
-          return;
-        }
-        setShowWarning(false);
-        handleNext();
-      }}
-    >
-      Finalizar Simulado
-    </button>
-  )}
-</div>
+            {currentQuestionIndex < questions.length - 1 ? (
+              <button
+                className="next-button"
+                onClick={() => {
+                  if (!selectedAnswers[currentQuestion.id]) {
+                    setShowWarning(true);
+                    return;
+                  }
+                  setShowWarning(false);
+                  handleNext();
+                }}
+              >
+                Próxima
+              </button>
+            ) : (
+              <button
+                className="submit-button"
+                onClick={() => {
+                  if (!selectedAnswers[currentQuestion.id]) {
+                    setShowWarning(true);
+                    return;
+                  }
+                  setShowWarning(false);
+                  handleNext();
+                }}
+              >
+                Finalizar Simulado
+              </button>
+            )}
+          </div>
 
         </div>
       </div>

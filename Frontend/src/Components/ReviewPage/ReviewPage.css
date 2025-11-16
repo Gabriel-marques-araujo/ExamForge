@@ -1,0 +1,181 @@
+.review-container {
+  width: 1200px;
+  margin: 20px auto;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.question-card-review {
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 20px;
+  background-color: #fff;
+  gap: 12px;
+}
+
+.review-wrapper {
+    /* Mantenha seus estilos de fundo e tamanho, e adicione este ajuste: */
+    padding-top: 80px; /* Aumente o padding superior (ex: 80px para uma nav de 60px) */
+    padding-left: 20px; 
+    padding-right: 20px;
+    padding-bottom: 30px; /* Mantenha o padding inferior */
+    
+    background-color: var(--review-bg-color);
+    min-height: 100vh;
+    color: var(--review-text-color);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.review-stats-header {
+  max-width: 900px;
+  margin: 0 auto 30px;
+  display: flex;
+  justify-content: space-around;
+  background-color: var(--review-card-bg); /* Usa cor do tema */
+  border-radius: 12px;
+  padding: 15px 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 0 15px;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: var(--review-text-color);
+  opacity: 0.7;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.stat-value.total-q {
+  color: #f1c40f; 
+}
+.stat-value.correct-q {
+  color: var(--review-correct-color);
+}
+.stat-value.wrong-q {
+  color: var(--review-wrong-color);
+}
+
+.time-stat .stat-value {
+  color: #3498db; 
+}
+
+.enunciado {
+  font-weight: 500;
+  margin-bottom: 12px;
+  font-size: 1.2rem;
+}
+
+.review-summary-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-around;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+  margin: 20px 0;
+  font-weight: 500;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.summary-number {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.summary-label {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.filter-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.filter-buttons button {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background-color: #f8f8f8;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.filter-buttons button.active {
+  background-color: #5570ff;
+  color: #fff;
+  border-color: #5570ff;
+}
+
+.alternativas {
+  font-size: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.alt-correct {
+  background-color: #e8ffe8;
+  color: #1b7d21;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.alt-wrong {
+  background-color: #ffeaea;
+  color: #b41d1d;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.alt-neutral {
+  background-color: #f8f8f8;
+  color: #333;
+  padding: 12px 12px;
+  border-radius: 8px;
+}
+
+.explicacao {
+  font-size: 14px;
+  background-color: #f0f4ff;
+  padding: 8px 12px;
+  border-left: 4px solid #5570ff;
+  border-radius: 8px;
+}
+
+.review-container,
+.review-container h1,
+.review-container h3,
+.review-container p,
+.review-container strong {
+  color: #222; 
+}
+
+body.dark .review-container,
+body.dark .review-container h1,
+body.dark .review-container h3,
+body.dark .review-container p,
+body.dark .review-container strong {
+  color: #fff; 
+}

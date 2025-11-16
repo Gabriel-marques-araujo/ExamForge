@@ -2,7 +2,6 @@ import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import NavBar from "../NavBar/NavBar";
 import "./ResultsPage.css";
-import { jsPDF } from "jspdf";
 
 const ResultsPage = () => {
   const location = useLocation();
@@ -14,8 +13,6 @@ const ResultsPage = () => {
     correctAnswers = 13,
     wrongAnswers = 7,
   } = location.state || {};
-
-  const percentage = ((correctAnswers / totalQuestions) * 100).toFixed(0);
 
   const handleBackToStart = () => navigate("/");
   const handleReviewAnswers = () => {
@@ -66,57 +63,65 @@ const ResultsPage = () => {
 
       <div className="results-wrapper" id="conteudoParaPDF">
         <div className="results-main">
-          {/* === Seção da nota === */}
-          <div className="score-section">
-            <div className="score-background">
-              <div className="decor-circle circle2"></div>
-              <div className="decor-circle circle1"></div>
-              <div className="score-circle">{score.toFixed(1)}</div>
-            </div>
-            <h2 className="score-label">Sua Nota</h2>
-          </div>
+          <div className="results-content">
 
-          {/* === Seção das estatísticas === */}
-          <div className="stats-section">
-            <div className="stat-card">
-              <span className="dot red-dot"></span>
-              <div>
-                <h3>{totalQuestions}</h3>
-                <p>Questões</p>
+            {/* === GRANDE DIV VERMELHA DA NOTA === */}
+            <div className="big-score-box">
+              <h1 className="big-score-title">SUA NOTA</h1>
+
+              <div className="score-display">
+                <span>{score.toFixed(1)}</span>
               </div>
             </div>
 
-            <div className="stat-card">
-              <span className="dot green-dot"></span>
-              <div>
-                <h3>{correctAnswers}</h3>
-                <p>Corretas</p>
+            {/* === BOX DAS ESTATÍSTICAS === */}
+            <div className="stats-box">
+              <div className="stats-section">
+                <div className="stat-card">
+                  <span className="dot yellow-dot"></span>
+                  <div>
+                    <h3>{totalQuestions}</h3>
+                    <p>Questões</p>
+                  </div>
+                </div>
+
+                <div className="stat-card">
+                  <span className="dot green-dot"></span>
+                  <div>
+                    <h3>{correctAnswers}</h3>
+                    <p>Corretas</p>
+                  </div>
+                </div>
+
+                <div className="stat-card">
+                  <span className="dot red-dot"></span>
+                  <div>
+                    <h3>{wrongAnswers}</h3>
+                    <p>Erradas</p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="stat-card">
-              <span className="dot red-dot"></span>
-              <div>
-                <h3>{wrongAnswers}</h3>
-                <p>Erradas</p>
-              </div>
-            </div>
-          </div>
+            {/* === BOTÕES === */}
+            <div className="results-actions">
+              <button className="result-button" onClick={handleReviewAnswers}>
+                Revisar Respostas
+              </button>
 
-          {/* === Botões === */}
-          <div className="results-actions">
-            <button className="action-button" onClick={handleReviewAnswers}>
-              Revisar Respostas
-            </button>
-            <button className="action-button" onClick={handleRetake}>
-              Refazer Simulado
-            </button>
-            <button className="action-button" onClick={handleExportPDF}>
-              Exportar PDF
-            </button>
-            <button className="restart-button" onClick={handleBackToStart}>
-              Voltar ao Início
-            </button>
+              <button className="result-button" onClick={handleRetake}>
+                Refazer Simulado
+              </button>
+
+              <button className="result-button" onClick={handleExportPDF}>
+                Exportar PDF
+              </button>
+
+              <button className="result-button" onClick={handleBackToStart}>
+                Voltar ao Início
+              </button>
+            </div>
+
           </div>
         </div>
       </div>

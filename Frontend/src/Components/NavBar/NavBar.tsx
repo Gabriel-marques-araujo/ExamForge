@@ -4,9 +4,10 @@ import { useNavigate } from "react-router-dom";
 
 interface NavBarProps {
   className?: string;
+  onThemeChange?: (isDark: boolean) => void;
 }
 
-const NavBar: React.FC<NavBarProps> = ({ className }) => {
+const NavBar: React.FC<NavBarProps> = ({ className, onThemeChange }) => {
   const navigate = useNavigate(); // hook para navegar
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem("theme") === "dark";
@@ -15,7 +16,9 @@ const NavBar: React.FC<NavBarProps> = ({ className }) => {
   useEffect(() => {
     document.body.classList.toggle("dark", darkMode);
     localStorage.setItem("theme", darkMode ? "dark" : "light");
-  }, [darkMode]);
+  if (onThemeChange) onThemeChange(darkMode); // ← avisa o App
+  }, [darkMode, onThemeChange]);
+
 
   return (
     <header className={`navbar ${className || ""}`}>
@@ -34,7 +37,7 @@ const NavBar: React.FC<NavBarProps> = ({ className }) => {
           aria-label="Alternar modo escuro"
         >
           <img
-            src={darkMode ? "/sun.svg" : "/darkmode.svg"}
+            src={darkMode ? "/lightmode.svg" : "/darkmode.svg"}
             alt={darkMode ? "Modo claro" : "Modo escuro"}
             className="navbar-mode"
           />

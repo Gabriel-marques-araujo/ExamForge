@@ -2,7 +2,7 @@
     position: fixed;
     top: 50%;
     left: 50%;
-    width: 50%;
+    width: 70%;
     background-color: #ffffff;
     display: flex;
     justify-content: center;
@@ -14,13 +14,21 @@
     padding: 1.5rem;
 }
 
+body.dark .files-modal{
+    background-color: #121212;
+    border: #fff 0.1px solid;
+}
 
 .title-modal{
-    font-size: 1.3rem;
+    font-size: 1.5rem;
     font-weight: bold;
     color: #1D2234;
     font-family: inter, sans-serif;
     margin-bottom: 0.3rem;
+}
+
+body.dark .title-modal{
+  color: rgba(255, 255, 255, 0.87);
 }
 
 .button-close{
@@ -39,10 +47,12 @@
     display: flex;
     justify-content: space-between;
     flex-direction: row;
+        font-size: 1rem;
+
 }
 
 .subtitle-modal{
-    font-size: 1rem;
+    font-size: 1.2rem;
     font-weight: 500;
     color: #535862;
     font-family: inter, sans-serif;
@@ -59,7 +69,6 @@
     border-radius: 20px;
     cursor: pointer;
     text-align: center; 
-
 }
 
 .upload-icon{
@@ -67,7 +76,7 @@
 }
 
 .upload-text{
-    font-size: 1rem;
+    font-size: 1.2rem;
     font-weight: 400;
     color: #535862;
     font-family: inter, sans-serif;
@@ -75,7 +84,7 @@
 }
 
 .browse-link{
-    font-size: 1rem;
+    font-size: 1.2rem;
     font-weight: 600;
     color: #E64756;
     font-family: inter, sans-serif;
@@ -83,7 +92,7 @@
 }
 
 .file-types-text{
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: 400;
     color: #535862;
     font-family: inter, sans-serif;
@@ -108,6 +117,11 @@
     border: #E9EAEB 1px solid;
     cursor: pointer;
     padding: 0.8rem;
+}
+
+body.dark .cancel-button{
+  background-color: #121212;
+  color: #ffffff;
 }
 
 .attach-button{
@@ -145,6 +159,10 @@
     background-color: #fafafa; 
     border-radius: 12px; 
     min-height: 70px; 
+}
+
+body.dark .uploaded-file{
+  background-color: #212121;
 }
 
 .file-row {
@@ -197,7 +215,7 @@
 }
 
 .file-name {
-    font-size: 1rem;
+    font-size: 1.2rem;
     font-weight: 500;
     color: #1D2234;
     font-family: inter, sans-serif;
@@ -206,8 +224,12 @@
     text-overflow: ellipsis;
 }
 
+body.dark .file-name{
+  color: #ffffff;
+}
+
 .file-size {
-    font-size: 0.85rem;
+    font-size: 1rem;
     font-weight: 400;
     color: #535862;
     font-family: inter, sans-serif;
@@ -248,7 +270,7 @@
 .progress-percent-full {
     min-width: 35px;
     text-align: right;
-    font-size: 0.75rem;
+    font-size: 1rem;
     font-family: inter, sans-serif;
     color: #535862;
     font-weight: 600;
@@ -271,4 +293,13 @@
 
 .uploaded-files-container::-webkit-scrollbar-thumb:hover {
     background-color: #CC3D4D; 
+}
+
+@media (max-width: 768px) {
+    .files-modal {
+        width: 80%;
+        padding: 1rem;
+        max-height: 75vh;
+        z-index: 1001;
+    }
 }
