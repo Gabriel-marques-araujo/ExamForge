@@ -89,19 +89,22 @@ const questions: Question[] = [
     if (currentQuestionIndex > 0) setCurrentQuestionIndex((prev) => prev - 1);
   };
 
-  const handleSubmit = () => {
-    navigate("/resultado", {
-      state: {
-        score: 10.0,
-        totalQuestions: questions.length,
-        correctAnswers: 13,
-        wrongAnswers: 7,
-        questions: questions,         
-        userAnswers: selectedAnswers, 
-        topic, 
-      },
-    });
-  };
+ const handleSubmit = () => {
+  navigate("/resultado", {
+    state: {
+      score: 10.0,
+      totalQuestions: questions.length,
+      correctAnswers: 13,
+      wrongAnswers: 7,
+      questions: questions,         // lista de questões
+      userAnswers: selectedAnswers, // respostas do usuário
+      timeMinutes: timeMinutes,     // tempo configurado
+      instructions: location.state?.instructions || "Geral", // tema/tópico
+      initialFiles: location.state?.initialFiles || [],      // arquivos iniciais
+    },
+  });
+};
+
 
   return (
     <>
