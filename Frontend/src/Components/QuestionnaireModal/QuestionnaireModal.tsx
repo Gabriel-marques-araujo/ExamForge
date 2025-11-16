@@ -19,11 +19,10 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
   const MAX_TIME = 120;
   const MAX_INSTRUCTIONS = 80;
 
-  // 🔥 VALIDAÇÃO DO FORMULÁRIO
   const isFormValid = instructions.trim().length > 0;
 
   const handleCreate = () => {
-    if (!isFormValid) return; // segurança extra
+    if (!isFormValid) return; 
 
     navigate("/questions", {
       state: { numQuestions, timeMinutes, instructions, initialFiles },
