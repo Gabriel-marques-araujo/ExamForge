@@ -2,7 +2,7 @@
     position: fixed;
     top: 50%;
     left: 50%;
-    width: 30%;
+    width: 50%;
     background-color: #ffffff;
     display: flex;
     justify-content: center;
@@ -22,7 +22,7 @@ body.dark .files-modal{
 }
 
 .title-modal{
-    font-size: 1.3rem;
+    font-size: 1.5rem;
     font-weight: bold;
     color: #1D2234;
     font-family: inter, sans-serif;
@@ -49,10 +49,11 @@ body.dark .title-modal{
     display: flex;
     justify-content: space-between;
     flex-direction: row;
+    font-size: 1rem;
 }
 
 .subtitle-modal{
-    font-size: 1rem;
+    font-size: 1.2rem;
     font-weight: 500;
     color: #535862;
     font-family: inter, sans-serif;
@@ -77,7 +78,7 @@ body.dark .title-modal{
 }
 
 .upload-text{
-    font-size: 1rem;
+    font-size: 1.2rem;
     font-weight: 400;
     color: #535862;
     font-family: inter, sans-serif;
@@ -85,7 +86,7 @@ body.dark .title-modal{
 }
 
 .browse-link{
-    font-size: 1rem;
+    font-size: 1.2rem;
     font-weight: 600;
     color: #E64756;
     font-family: inter, sans-serif;
@@ -93,7 +94,7 @@ body.dark .title-modal{
 }
 
 .file-types-text{
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: 400;
     color: #535862;
     font-family: inter, sans-serif;
@@ -216,7 +217,7 @@ body.dark .uploaded-file{
 }
 
 .file-name {
-    font-size: 1rem;
+    font-size: 1.2rem;
     font-weight: 500;
     color: #1D2234;
     font-family: inter, sans-serif;
@@ -230,7 +231,7 @@ body.dark .file-name{
 }
 
 .file-size {
-    font-size: 0.85rem;
+    font-size: 1rem;
     font-weight: 400;
     color: #535862;
     font-family: inter, sans-serif;
@@ -271,7 +272,7 @@ body.dark .file-name{
 .progress-percent-full {
     min-width: 35px;
     text-align: right;
-    font-size: 0.75rem;
+    font-size: 1rem;
     font-family: inter, sans-serif;
     color: #535862;
     font-weight: 600;

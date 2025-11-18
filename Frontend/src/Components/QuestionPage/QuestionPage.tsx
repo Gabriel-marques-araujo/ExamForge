@@ -2,28 +2,78 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import NavBar from "../NavBar/NavBar";
 import "./QuestionPage.css";
+import axios from "axios";
 
 interface Question {
   id: number;
   enunciado: string;
   alternativas: string[];
+  rawData?: any;
+  correctAnswer: string;
+  explicacao: string;
 }
 
 interface LocationState {
   timeMinutes: number;
+  topic?: string;
+  initialFiles?: File[];
+  generatedQuestions?: any;
 }
 
 const QuestionsPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { timeMinutes = 120 } = (location.state as LocationState) || {};
+  const state = location.state as LocationState | undefined;
+  const timeMinutes = state?.timeMinutes || 120;
+  const topic = state?.topic || "Geral";
+  const generatedQuestions = state?.generatedQuestions || [];
+
+  const questions: Question[] = React.useMemo(() => {
+    if (!generatedQuestions) return [];
+
+    const raw = Array.isArray(generatedQuestions)
+      ? generatedQuestions
+      : Object.values(generatedQuestions);
+
+    const validQuestions = raw.filter(
+      (q: any) =>
+        q &&
+        (q.enunciado || q.question || q.text) &&
+        (q.alternativas || q.options || q.choices)
+    );
+
+    return validQuestions.map((q: any, i: number) => ({
+      id: q.id ?? i + 1,
+      enunciado: q.enunciado || q.question || q.text || `Questão ${i + 1}`,
+      alternativas: q.alternativas || q.options || q.choices || [],
+      correctAnswer: q.correctAnswer || q.correct_answer || q.answer || "",
+      explicacao: q.explicacao || q.explanation || q.details || "",
+      rawData: q,
+    }));
+  }, [generatedQuestions]);
+
+  if (questions.length === 0) {
+    return (
+      <div className="questions-container">
+        <NavBar />
+        <div className="no-questions">
+          <h2>Nenhuma questão foi carregada 😕</h2>
+          <button onClick={() => navigate(-1)} className="back-button">
+            Voltar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: string }>({});
   const [timeLeft, setTimeLeft] = useState(timeMinutes * 60);
   const [isTimeOver, setIsTimeOver] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [results, setResults] = useState<{ [key: number]: any }>({});
 
   useEffect(() => {
     if (timeLeft <= 0) {
@@ -40,31 +90,6 @@ const QuestionsPage: React.FC = () => {
     return `${m}:${s}`;
   };
 
-  const questions: Question[] = [
-    {
-      id: 1,
-      enunciado: "O que é um caso de teste?",
-      alternativas: [
-        "A) Um defeito encontrado no sistema",
-        "B) Uma funcionalidade a ser desenvolvida",
-        "C) Um conjunto de condições para verificar um requisito",
-        "D) Um relatório de execução de teste",
-        "E) Uma métrica de cobertura de código",
-      ],
-    },
-    {
-      id: 2,
-      enunciado: "O que é teste de regressão?",
-      alternativas: [
-        "A) Teste realizado apenas na fase inicial do projeto",
-        "B) Teste feito para verificar se mudanças causaram falhas",
-        "C) Teste de performance em ambiente de produção",
-        "D) Teste exploratório feito por desenvolvedores",
-        "E) Nenhuma das alternativas",
-      ],
-    },
-  ];
-
   const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
@@ -72,9 +97,45 @@ const QuestionsPage: React.FC = () => {
     setSelectedAnswers((prev) => ({ ...prev, [questionId]: option }));
   };
 
-  const handleNext = () => {
-    if (currentQuestionIndex < questions.length - 1) setCurrentQuestionIndex((prev) => prev + 1);
-    else handleSubmit();
+  const checkAnswer = async (question: Question, chosenOption: string) => {
+    try {
+      const response = await axios.post("http://localhost:8000/rag/check_answer/", {
+        question_data: question.rawData,
+        chosen_option: chosenOption,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Erro ao verificar resposta:", error);
+      return null;
+    }
+  };
+
+  const handleNext = async () => {
+    const chosenOption = selectedAnswers[currentQuestion.id];
+    if (!chosenOption) {
+      setShowWarning(true);
+      return;
+    }
+    setShowWarning(false);
+
+    // Se já existe feedback, ir para próxima
+    if (showFeedback) {
+      setShowFeedback(false);
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex((prev) => prev + 1);
+      } else {
+        handleSubmit();
+      }
+      return;
+    }
+
+   
+    const result = await checkAnswer(currentQuestion, chosenOption);
+    if (result) {
+      setResults((prev) => ({ ...prev, [currentQuestion.id]: result }));
+    }
+
+    setShowFeedback(true);
   };
 
   const handleBack = () => {
@@ -82,15 +143,28 @@ const QuestionsPage: React.FC = () => {
   };
 
   const handleSubmit = () => {
+    const correct = Object.values(results).filter((r) => r.is_correct).length;
+    const totalQuestions = questions.length;
+    
+    const score  = (correct / totalQuestions) * 10;
+    const wrong = totalQuestions - correct;
+
     navigate("/resultado", {
       state: {
-        score: 10.0,
+        score,
         totalQuestions: questions.length,
-        correctAnswers: 13,
-        wrongAnswers: 7,
+        correctAnswers: correct,
+        wrongAnswers: wrong,
+        questions,
+        userAnswers: selectedAnswers,
+        timeMinutes,
+        topic: location.state?.topic || "Geral",
+        initialFiles: location.state?.initialFiles || [],
+        results,
       },
     });
   };
+const feedback = results[currentQuestion.id];
 
   return (
     <>
@@ -98,7 +172,18 @@ const QuestionsPage: React.FC = () => {
 
       <div className="questions-container">
         <div className="question-card">
-          {/* Barra de progresso */}
+          <div className="top-info-bar">
+            <div className="topic-section">
+              <span className="label">Tópico:</span>
+              <span className="value">{topic}</span>
+            </div>
+
+            <div className="timer-section">
+              <span className="label">Tempo Restante:</span>
+              <span className="value">{formatTime(timeLeft)}</span>
+            </div>
+          </div>
+
           <div className="progress-bar">
             <div className="progress" style={{ width: `${progress}%` }} />
           </div>
@@ -112,97 +197,66 @@ const QuestionsPage: React.FC = () => {
                 <p className="warning-text">⚠️ Selecione uma alternativa para continuar.</p>
               )}
             </div>
-
-            {/* Relógio flutuante no canto da tela */}
-<div className="floating-timer">
-  <svg className="progress-ring" width="80" height="80">
-    <circle
-      className="progress-ring__circle-bg"
-      stroke="#e0e0e0"
-      strokeWidth="8"
-      fill="transparent"
-      r="36"
-      cx="40"
-      cy="40"
-    />
-    <circle
-      className="progress-ring__circle"
-      stroke="#e64756"
-      strokeWidth="8"
-      fill="transparent"
-      r="36"
-      cx="40"
-      cy="40"
-      strokeDasharray={2 * Math.PI * 36}
-      strokeDashoffset={2 * Math.PI * 36 * (timeLeft / (timeMinutes * 60))}
-    />
-  </svg>
-  <div className="timer-text">{formatTime(timeLeft)}</div>
-</div>
-
           </div>
 
           <div className="options">
-            {currentQuestion.alternativas.map((alt, idx) => (
-              <label
-                key={idx}
-                className={`option-box ${
-                  selectedAnswers[currentQuestion.id] === alt ? "selected" : ""
-                }`}
-                onClick={() => handleSelect(currentQuestion.id, alt)}
-              >
-                <input
-                  type="radio"
-                  name={`question-${currentQuestion.id}`}
-                  value={alt}
-                  checked={selectedAnswers[currentQuestion.id] === alt}
-                  onChange={() => handleSelect(currentQuestion.id, alt)}
-                  style={{ display: "none" }}
-                />
-                {alt}
-              </label>
-            ))}
+            {currentQuestion.alternativas.map((alt: any, idx: number) => {
+              const text = typeof alt === "string" ? alt : alt.option;
+              return (
+                <label
+                  key={idx}
+                  className={`option-box ${
+                    selectedAnswers[currentQuestion.id] === text ? "selected" : ""
+                  }`}
+                  onClick={() => handleSelect(currentQuestion.id, text)}
+                >
+                  <input
+                    type="radio"
+                    name={`question-${currentQuestion.id}`}
+                    value={text}
+                    checked={selectedAnswers[currentQuestion.id] === text}
+                    onChange={() => handleSelect(currentQuestion.id, text)}
+                    style={{ display: "none" }}
+                  />
+                  {text}
+                </label>
+              );
+            })}
           </div>
 
-        {/* Ações (botões) */}
-<div className={`actions ${currentQuestionIndex === 0 ? "first-question" : ""}`}>
-  {currentQuestionIndex > 0 && (
-    <button className="back-button" onClick={handleBack}>
-      Voltar
-    </button>
-  )}
+          {showFeedback && feedback && (
+            <div className="feedback">
+              <p><strong>Resposta:</strong> {feedback.is_correct ? "✔️ Correta" : "❌ Incorreta"}</p>
+              <p><strong>Alternativa escolhida:</strong> {feedback.chosen_option}</p>
+              <p><strong>Explicação:</strong> {feedback.is_correct ? feedback.explanation : feedback.explanation_chosen}</p>
 
-  {currentQuestionIndex < questions.length - 1 ? (
-    <button
-      className="next-button"
-      onClick={() => {
-        if (!selectedAnswers[currentQuestion.id]) {
-          setShowWarning(true);
-          return;
-        }
-        setShowWarning(false);
-        handleNext();
-      }}
-    >
-      Próxima
-    </button>
-  ) : (
-    <button
-      className="submit-button"
-      onClick={() => {
-        if (!selectedAnswers[currentQuestion.id]) {
-          setShowWarning(true);
-          return;
-        }
-        setShowWarning(false);
-        handleNext();
-      }}
-    >
-      Finalizar Simulado
-    </button>
-  )}
-</div>
+              {!feedback.is_correct && (
+                <>
+                  <p><strong>Alternativa correta:</strong> {feedback.correct_option}</p>
+                  <p><strong>Por que está correta:</strong> {feedback.explanation_correct}</p>
+                </>
+              )}
+            </div>
+          )}
 
+          <div className={`actions ${currentQuestionIndex === 0 ? "first-question" : ""}`}>
+            {currentQuestionIndex > 0 && (
+              <button className="back-button" onClick={handleBack}>
+                Voltar
+              </button>
+            )}
+
+            <button
+              className={showFeedback ? "next-button" : "submit-button"}
+              onClick={handleNext}
+            >
+              {showFeedback
+                ? currentQuestionIndex < questions.length - 1
+                  ? "Próxima"
+                  : "Finalizar"
+                : "Confirmar Resposta"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -219,5 +273,4 @@ const QuestionsPage: React.FC = () => {
     </>
   );
 };
-
 export default QuestionsPage;

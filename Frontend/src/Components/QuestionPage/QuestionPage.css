@@ -432,3 +432,37 @@ body.dark .option-box.selected {
 .restart-button {
   margin-top: 2rem;
 }
+.feedback {
+  background-color: #f1ebec;
+  color: #1d2234;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  margin-top: 1.5rem;
+  border: 2px solid #e64756;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.feedback p {
+  margin: 0.5rem 0;
+}
+
+body.dark .feedback {
+  background-color: #121212;
+  color: #ffffff;
+  border-color: #e64756;
+}
+
+.feedback strong {
+  font-weight: 700;
+}
+
+.feedback .correct {
+  color: #2eaf2e;
+ 
+}
+
+.feedback .wrong {
+  color: #e64756;
+  
+}

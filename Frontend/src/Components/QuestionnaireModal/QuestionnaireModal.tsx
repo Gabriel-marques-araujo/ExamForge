@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import "./QuestionnaireModal.css";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 interface QuestionnaireModalProps {
   onClose: () => void;
@@ -13,7 +14,8 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
 
   const [numQuestions, setNumQuestions] = useState(1);
   const [timeMinutes, setTimeMinutes] = useState(10);
-  const [instructions, setInstructions] = useState("");
+  const [topic, setTopic] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const MAX_QUESTIONS = 15;
   const MAX_TIME = 120;
@@ -22,14 +24,40 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
   const incrementQuestions = () => setNumQuestions(prev => Math.min(prev + 1, MAX_QUESTIONS));
   const decrementQuestions = () => setNumQuestions(prev => Math.max(prev - 1, 1));
 
-  const incrementTime = () => setTimeMinutes(prev => Math.min(prev + 1, MAX_TIME));
-  const decrementTime = () => setTimeMinutes(prev => Math.max(prev - 1, 1));
+  const isFormValid = topic.trim().length > 0;
 
-  const handleCreate = () => {
-    navigate("/questions", {
-      state: { numQuestions, timeMinutes, instructions, initialFiles },
-    });
+  const handleCreate = async () => {
+    setLoading(true);
+  const payload = {
+    topic: topic,
+    qnt_questoes: numQuestions,
   };
+
+  try {
+    const response = await axios.post("http://localhost:8000/rag/generate_mcq/", payload);
+    console.log("MCQs gerados:", response.data);
+
+    navigate("/questions", {
+      state: {
+        numQuestions,
+        timeMinutes,
+        topic,
+        initialFiles,
+        generatedQuestions: response.data,
+      },
+    });
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error("Erro ao gerar questões:", error);
+      alert(`Erro ao gerar questões: ${error.response?.data?.error || "Falha no servidor"}`);
+    } else {
+      console.error("Não foi possível conectar ao backend.");
+      alert("Não foi possível conectar ao backend.");
+    }
+  } finally{
+    setLoading(false);
+  }
+};
 
   return (
     <div className="files-modal-2">
@@ -88,35 +116,18 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
         </div>
 
         <div className="config-row">
-          <label>Instruções para as questões:</label>
-          <textarea
-            value={instructions}
-            onChange={(e) => setInstructions(e.target.value)}
-            placeholder="Digite como deseja que as questões sejam elaboradas..."
-            rows={6}
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              borderRadius: "12px",
-              border: "1px solid #E9EAEB",
-              fontFamily: "inter, sans-serif",
-              fontSize: "1rem",
-              marginTop: "0.5rem",
-              resize: "none",
-              boxSizing: "border-box",
-            }}
+          <label>Matéria / Tópico</label>
+
+          <input
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="Ex: Inteligência Artificial, História do Brasil, Matemática..."
+            className="topic-area"
             maxLength={MAX_INSTRUCTIONS}
           />
-          <div
-            style={{
-              textAlign: "right",
-              fontSize: "0.75rem",
-              color: "#535862",
-              marginTop: "0.25rem",
-              fontFamily: "inter, sans-serif",
-            }}
-          >
-            {instructions.length}/{MAX_INSTRUCTIONS} caracteres
+
+          <div className="char-count">
+            {topic.length}/{MAX_INSTRUCTIONS} caracteres
           </div>
         </div>
       </div>
