@@ -102,6 +102,68 @@ Documentos:
             status_code=500,
             detail=f"Erro ao decodificar JSON da resposta do Gemini: {str(e)}\nResposta bruta:\n{response_text}"
         )
+    
+
+def substitute_question(original_mcq: dict, question_number: str, topic: str, temperature: float = 0.5):
+    """Substitui a questão escolhida por uma nova questão gerada."""
+    
+    if not db:
+        raise HTTPException(status_code=500, detail="Banco vetorial não inicializado.")
+    
+    relevant_docs = db.similarity_search(topic, k=8)
+    if not relevant_docs:
+        raise HTTPException(status_code=404, detail="Nenhum documento relevante encontrado.")
+    
+    context = format_docs(relevant_docs)
+
+    prompt = f"""
+Você é especialista no tema: {topic}.
+
+Gere uma NOVA questão de múltipla escolha para substituir a questão existente.
+⚠️ A nova questão deve ser diferente das demais questões já geradas.
+
+Questão atual que deve ser substituída:
+{json.dumps(original_mcq.get(question_number, {}), ensure_ascii=False)}
+
+Liste também as outras questões já existentes para evitar repetição:
+{json.dumps(original_mcq, ensure_ascii=False)}
+
+Formato OBRIGATÓRIO:
+{{
+    "{question_number}": {{
+        "text": "...",
+        "options": [
+            {{"option": "...", "is_correct": true/false, "explanation": "..."}},
+            {{"option": "...", "is_correct": true/false, "explanation": "..."}},
+            {{"option": "...", "is_correct": true/false, "explanation": "..."}},
+            {{"option": "...", "is_correct": true/false, "explanation": "..."}}
+        ],
+        "resolution": "..."
+    }}
+}}
+
+Documentos:
+{context}
+"""
+
+    response_text = get_gemini_response(prompt, temperature)
+
+    try:
+        start = response_text.find("{")
+        end = response_text.rfind("}") + 1
+        json_text = response_text[start:end]
+        new_question = json.loads(json_text)
+    except:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao decodificar JSON da nova questão.\nResposta bruta:\n{response_text}"
+        )
+    
+    # substitui somente a questão escolhida
+    original_mcq[question_number] = new_question[question_number]
+
+    return original_mcq
+
 
 # Modelos de requisição
 class MCQRequest(BaseModel):
@@ -111,6 +173,12 @@ class MCQRequest(BaseModel):
 class CheckAnswerRequest(BaseModel):
     question_data: dict  # JSON da questão gerada pelo /generate_mcq/
     chosen_option: str
+
+class SubstituteQuestionRequest(BaseModel):
+    original_mcq: dict
+    question_number: str
+    topic: str
+    
 
 # Endpoints
 @router.post("/generate_mcq/")
@@ -167,7 +235,15 @@ def check_answer(data: CheckAnswerRequest):
             "explanation_correct": explanation_correct
         }
 
+@router.post("/substitute_question/")
+def substitute_question_endpoint(data: SubstituteQuestionRequest):
+    updated = substitute_question(
+        original_mcq=data.original_mcq,
+        question_number=data.question_number,
+        topic=data.topic,
 
+    )
+    return updated
 @router.get("/status/")
 def status():
     """Verifica status da coleção vetorial."""
