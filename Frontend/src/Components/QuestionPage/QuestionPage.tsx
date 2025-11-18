@@ -2,19 +2,22 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import NavBar from "../NavBar/NavBar";
 import "./QuestionPage.css";
+import axios from "axios";
 
 interface Question {
   id: number;
   enunciado: string;
   alternativas: string[];
+  rawData?: any;
   correctAnswer: string;
   explicacao: string;
 }
 
 interface LocationState {
   timeMinutes: number;
-  instructions?: string; 
+  topic?: string;
   initialFiles?: File[];
+  generatedQuestions?: any;
 }
 
 const QuestionsPage: React.FC = () => {
@@ -23,13 +26,54 @@ const QuestionsPage: React.FC = () => {
 
   const state = location.state as LocationState | undefined;
   const timeMinutes = state?.timeMinutes || 120;
-  const topic = state?.instructions || "Geral";
+  const topic = state?.topic || "Geral";
+  const generatedQuestions = state?.generatedQuestions || [];
+
+  const questions: Question[] = React.useMemo(() => {
+    if (!generatedQuestions) return [];
+
+    const raw = Array.isArray(generatedQuestions)
+      ? generatedQuestions
+      : Object.values(generatedQuestions);
+
+    const validQuestions = raw.filter(
+      (q: any) =>
+        q &&
+        (q.enunciado || q.question || q.text) &&
+        (q.alternativas || q.options || q.choices)
+    );
+
+    return validQuestions.map((q: any, i: number) => ({
+      id: q.id ?? i + 1,
+      enunciado: q.enunciado || q.question || q.text || `Questão ${i + 1}`,
+      alternativas: q.alternativas || q.options || q.choices || [],
+      correctAnswer: q.correctAnswer || q.correct_answer || q.answer || "",
+      explicacao: q.explicacao || q.explanation || q.details || "",
+      rawData: q,
+    }));
+  }, [generatedQuestions]);
+
+  if (questions.length === 0) {
+    return (
+      <div className="questions-container">
+        <NavBar />
+        <div className="no-questions">
+          <h2>Nenhuma questão foi carregada 😕</h2>
+          <button onClick={() => navigate(-1)} className="back-button">
+            Voltar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: string }>({});
   const [timeLeft, setTimeLeft] = useState(timeMinutes * 60);
   const [isTimeOver, setIsTimeOver] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [results, setResults] = useState<{ [key: number]: any }>({});
 
   useEffect(() => {
     if (timeLeft <= 0) {
@@ -46,33 +90,6 @@ const QuestionsPage: React.FC = () => {
     return `${m}:${s}`;
   };
 
-const questions: Question[] = [
-  {
-    id: 1,
-    enunciado: "O que é um caso de teste?",
-    alternativas: [
-      "A) Um defeito encontrado no sistema",
-      "B) Uma funcionalidade a ser desenvolvida",
-      "C) Um conjunto de condições para verificar um requisito",
-      "D) Um relatório de execução de teste",
-    ],
-    correctAnswer: "C) Um conjunto de condições para verificar um requisito",
-    explicacao: "Um caso de teste define condições necessárias para validar um requisito.",
-  },
-  {
-    id: 2,
-    enunciado: "O que é teste de regressão?",
-    alternativas: [
-      "A) Teste realizado apenas no início do projeto",
-      "B) Teste para verificar se alterações causaram falhas",
-      "C) Teste de performance em produção",
-      "D) Teste exploratório",
-    ],
-    correctAnswer: "B) Teste para verificar se alterações causaram falhas",
-    explicacao: "É executado após mudanças no sistema para garantir que nada foi quebrado.",
-  },
-];
-
   const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
@@ -80,31 +97,74 @@ const questions: Question[] = [
     setSelectedAnswers((prev) => ({ ...prev, [questionId]: option }));
   };
 
-  const handleNext = () => {
-    if (currentQuestionIndex < questions.length - 1) setCurrentQuestionIndex((prev) => prev + 1);
-    else handleSubmit();
+  const checkAnswer = async (question: Question, chosenOption: string) => {
+    try {
+      const response = await axios.post("http://localhost:8000/rag/check_answer/", {
+        question_data: question.rawData,
+        chosen_option: chosenOption,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Erro ao verificar resposta:", error);
+      return null;
+    }
+  };
+
+  const handleNext = async () => {
+    const chosenOption = selectedAnswers[currentQuestion.id];
+    if (!chosenOption) {
+      setShowWarning(true);
+      return;
+    }
+    setShowWarning(false);
+
+    // Se já existe feedback, ir para próxima
+    if (showFeedback) {
+      setShowFeedback(false);
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex((prev) => prev + 1);
+      } else {
+        handleSubmit();
+      }
+      return;
+    }
+
+   
+    const result = await checkAnswer(currentQuestion, chosenOption);
+    if (result) {
+      setResults((prev) => ({ ...prev, [currentQuestion.id]: result }));
+    }
+
+    setShowFeedback(true);
   };
 
   const handleBack = () => {
     if (currentQuestionIndex > 0) setCurrentQuestionIndex((prev) => prev - 1);
   };
 
- const handleSubmit = () => {
-  navigate("/resultado", {
-    state: {
-      score: 10.0,
-      totalQuestions: questions.length,
-      correctAnswers: 13,
-      wrongAnswers: 7,
-      questions: questions,         // lista de questões
-      userAnswers: selectedAnswers, // respostas do usuário
-      timeMinutes: timeMinutes,     // tempo configurado
-      instructions: location.state?.instructions || "Geral", // tema/tópico
-      initialFiles: location.state?.initialFiles || [],      // arquivos iniciais
-    },
-  });
-};
+  const handleSubmit = () => {
+    const correct = Object.values(results).filter((r) => r.is_correct).length;
+    const totalQuestions = questions.length;
+    
+    const score  = (correct / totalQuestions) * 10;
+    const wrong = totalQuestions - correct;
 
+    navigate("/resultado", {
+      state: {
+        score,
+        totalQuestions: questions.length,
+        correctAnswers: correct,
+        wrongAnswers: wrong,
+        questions,
+        userAnswers: selectedAnswers,
+        timeMinutes,
+        topic: location.state?.topic || "Geral",
+        initialFiles: location.state?.initialFiles || [],
+        results,
+      },
+    });
+  };
+const feedback = results[currentQuestion.id];
 
   return (
     <>
@@ -112,25 +172,23 @@ const questions: Question[] = [
 
       <div className="questions-container">
         <div className="question-card">
-<div className="top-info-bar">
- <div className="topic-section">
-  <span className="label">Tópico:</span>
-  <span className="value">{topic}</span>
-</div>
+          <div className="top-info-bar">
+            <div className="topic-section">
+              <span className="label">Tópico:</span>
+              <span className="value">{topic}</span>
+            </div>
 
-
-  <div className="timer-section">
-    <span className="label">Tempo Restante:</span>
-    <span className="value">{formatTime(timeLeft)}</span>
-  </div>
-</div>
+            <div className="timer-section">
+              <span className="label">Tempo Restante:</span>
+              <span className="value">{formatTime(timeLeft)}</span>
+            </div>
+          </div>
 
           <div className="progress-bar">
             <div className="progress" style={{ width: `${progress}%` }} />
           </div>
 
           <div className="question-header-with-timer">
-
             <div className="question-header">
               <div className="question-number">{currentQuestion.id}</div>
               <p className="question-text">{currentQuestion.enunciado}</p>
@@ -139,30 +197,48 @@ const questions: Question[] = [
                 <p className="warning-text">⚠️ Selecione uma alternativa para continuar.</p>
               )}
             </div>
-
           </div>
 
           <div className="options">
-            {currentQuestion.alternativas.map((alt, idx) => (
-              <label
-                key={idx}
-                className={`option-box ${
-                  selectedAnswers[currentQuestion.id] === alt ? "selected" : ""
-                }`}
-                onClick={() => handleSelect(currentQuestion.id, alt)}
-              >
-                <input
-                  type="radio"
-                  name={`question-${currentQuestion.id}`}
-                  value={alt}
-                  checked={selectedAnswers[currentQuestion.id] === alt}
-                  onChange={() => handleSelect(currentQuestion.id, alt)}
-                  style={{ display: "none" }}
-                />
-                {alt}
-              </label>
-            ))}
+            {currentQuestion.alternativas.map((alt: any, idx: number) => {
+              const text = typeof alt === "string" ? alt : alt.option;
+              return (
+                <label
+                  key={idx}
+                  className={`option-box ${
+                    selectedAnswers[currentQuestion.id] === text ? "selected" : ""
+                  }`}
+                  onClick={() => handleSelect(currentQuestion.id, text)}
+                >
+                  <input
+                    type="radio"
+                    name={`question-${currentQuestion.id}`}
+                    value={text}
+                    checked={selectedAnswers[currentQuestion.id] === text}
+                    onChange={() => handleSelect(currentQuestion.id, text)}
+                    style={{ display: "none" }}
+                  />
+                  {text}
+                </label>
+              );
+            })}
           </div>
+
+          {showFeedback && feedback && (
+            <div className="feedback">
+              <p><strong>Resposta:</strong> {feedback.is_correct ? "✔️ Correta" : "❌ Incorreta"}</p>
+              <p><strong>Alternativa escolhida:</strong> {feedback.chosen_option}</p>
+              <p><strong>Explicação:</strong> {feedback.is_correct ? feedback.explanation : feedback.explanation_chosen}</p>
+
+              {!feedback.is_correct && (
+                <>
+                  <p><strong>Alternativa correta:</strong> {feedback.correct_option}</p>
+                  <p><strong>Por que está correta:</strong> {feedback.explanation_correct}</p>
+                </>
+              )}
+            </div>
+          )}
+
           <div className={`actions ${currentQuestionIndex === 0 ? "first-question" : ""}`}>
             {currentQuestionIndex > 0 && (
               <button className="back-button" onClick={handleBack}>
@@ -170,37 +246,17 @@ const questions: Question[] = [
               </button>
             )}
 
-            {currentQuestionIndex < questions.length - 1 ? (
-              <button
-                className="next-button"
-                onClick={() => {
-                  if (!selectedAnswers[currentQuestion.id]) {
-                    setShowWarning(true);
-                    return;
-                  }
-                  setShowWarning(false);
-                  handleNext();
-                }}
-              >
-                Próxima
-              </button>
-            ) : (
-              <button
-                className="submit-button"
-                onClick={() => {
-                  if (!selectedAnswers[currentQuestion.id]) {
-                    setShowWarning(true);
-                    return;
-                  }
-                  setShowWarning(false);
-                  handleNext();
-                }}
-              >
-                Finalizar Simulado
-              </button>
-            )}
+            <button
+              className={showFeedback ? "next-button" : "submit-button"}
+              onClick={handleNext}
+            >
+              {showFeedback
+                ? currentQuestionIndex < questions.length - 1
+                  ? "Próxima"
+                  : "Finalizar"
+                : "Confirmar Resposta"}
+            </button>
           </div>
-
         </div>
       </div>
 
@@ -217,5 +273,4 @@ const questions: Question[] = [
     </>
   );
 };
-
 export default QuestionsPage;

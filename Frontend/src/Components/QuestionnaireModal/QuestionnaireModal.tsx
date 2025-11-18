@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import "./QuestionnaireModal.css";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 interface QuestionnaireModalProps {
   onClose: () => void;
@@ -13,21 +14,47 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
 
   const [numQuestions, setNumQuestions] = useState(5);
   const [timeMinutes, setTimeMinutes] = useState(10);
-  const [instructions, setInstructions] = useState("");
+  const [topic, setTopic] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const MAX_QUESTIONS = 15;
   const MAX_TIME = 120;
   const MAX_INSTRUCTIONS = 80;
 
-  const isFormValid = instructions.trim().length > 0;
+  const isFormValid = topic.trim().length > 0;
 
-  const handleCreate = () => {
-    if (!isFormValid) return; 
+  const handleCreate = async () => {
+    setLoading(true);
+  const payload = {
+    topic: topic,
+    qnt_questoes: numQuestions,
+  };
+
+  try {
+    const response = await axios.post("http://localhost:8000/rag/generate_mcq/", payload);
+    console.log("MCQs gerados:", response.data);
 
     navigate("/questions", {
-      state: { numQuestions, timeMinutes, instructions, initialFiles },
+      state: {
+        numQuestions,
+        timeMinutes,
+        topic,
+        initialFiles,
+        generatedQuestions: response.data,
+      },
     });
-  };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error("Erro ao gerar questões:", error);
+      alert(`Erro ao gerar questões: ${error.response?.data?.error || "Falha no servidor"}`);
+    } else {
+      console.error("Não foi possível conectar ao backend.");
+      alert("Não foi possível conectar ao backend.");
+    }
+  } finally{
+    setLoading(false);
+  }
+};
 
   return (
     <div className="files-modal-2">
@@ -80,15 +107,15 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
           <label>Matéria / Tópico</label>
 
           <input
-            value={instructions}
-            onChange={(e) => setInstructions(e.target.value)}
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
             placeholder="Ex: Inteligência Artificial, História do Brasil, Matemática..."
             className="topic-area"
             maxLength={MAX_INSTRUCTIONS}
           />
 
           <div className="char-count">
-            {instructions.length}/{MAX_INSTRUCTIONS} caracteres
+            {topic.length}/{MAX_INSTRUCTIONS} caracteres
           </div>
 
          </div>
