@@ -2,18 +2,10 @@ body {
   margin: 0;
   font-family: "Inter", sans-serif;
   overflow-x: hidden;
+  background-color: #ffffff;
 }
 
-.container {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  width: 100vw;
-  padding: 0;
-  margin: 0;
-}
-
+/* Blur - o efeito de desfoque quando um modal ta aberto.*/
 .blur {
   filter: blur(5px);
   transition: filter 0.2s ease;
@@ -33,13 +25,30 @@ main.blur::after,
   z-index: 900;
 }
 
+main {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+
+/* O Layout da pagina principal */
+.container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
 .text-area {
   max-width: 39vw;
   margin: 0;
   padding: 5rem 6rem 7rem 2rem;
   text-align: left;
   color: #1D2234;
-  font-family: inter, sans-serif;
   opacity: 0;
   transform: translateY(20px);
   animation: fadeInUp 0.8s forwards;
@@ -50,17 +59,6 @@ main.blur::after,
   font-size: 3.45rem;
   font-weight: 600;
   margin-bottom: 0.2rem;
-}
-
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-
-body.dark .title{
-  color: rgba(255, 255, 255, 0.87);
 }
 
 .title2 {
@@ -75,9 +73,19 @@ body.dark .title{
   font-weight: 400;
   margin-bottom: 1rem;
   max-width: 30vw;
-  color: white;
+  color: black;
 }
 
+/* Modo escuro */
+body.dark .title {
+  color: rgba(255, 255, 255, 0.87);
+}
+
+body.dark .subtitle {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* A imagem */
 .image-area {
   padding: 6rem 2rem 4rem 6rem;
   opacity: 0;
@@ -88,27 +96,25 @@ body.dark .title{
 
 .books-image {
   height: 35rem;
+    width: auto;
 }
 
+/* Botao principal */
 .start-button {
-  background: linear-gradient(90deg, #E64756, #ff6b81);
+  background: linear-gradient(90deg, #E64756);
   color: rgba(255, 255, 255, 0.87);
-  font-family: inter, sans-serif;
+  font-family: Inter, sans-serif;
   font-weight: 700;
   letter-spacing: .5px;
-
   padding: 1.4rem 3rem;
   border-radius: 50px;
   font-size: 2.25rem;
-
   border: none;
   cursor: pointer;
   display: block;
   margin: 1rem auto 2rem auto;
-  
   width: fit-content;
   transition: transform .2s ease, box-shadow .2s ease;
-
   opacity: 0;
   transform: translateY(20px);
   animation: fadeInUp 0.8s forwards;
@@ -128,44 +134,7 @@ body.dark .start-button {
   transform: scale(0.97);
 }
 
-.modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 10000; 
-  background-color: #fff;
-  border-radius: 18px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-  padding: 2rem;
-  max-width: 600px;
-  width: 90%;
-
-  opacity: 0;
-  animation: fadeInUp 0.5s forwards;
-}
-
-.modal input[type="file"] {
-  display: block;
-  margin: 1rem 0;
-}
-
-.modal button {
-  background-color: #e64756;
-  color: #fff;
-  border: none;
-  padding: 0.9rem 2rem;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-right: 0.5rem;
-}
-
-.modal button:hover {
-  transform: scale(1.05);
-}
-
+/* Animaçao da pagina */
 @keyframes fadeInUp {
   to {
     opacity: 1;
@@ -173,6 +142,7 @@ body.dark .start-button {
   }
 }
 
+/* RESPONSIVO */
 @media (max-width: 1200px) {
   .container {
     flex-direction: column-reverse;
@@ -183,11 +153,6 @@ body.dark .start-button {
   .text-area {
     max-width: 90vw;
     padding: 2rem;
-  }
-
-  .subtitle {
-    max-width: 100%;
-    font-size: 1.2rem;
   }
 
   .image-area {
@@ -215,240 +180,6 @@ body.dark .start-button {
 
   .title, .title2 {
     font-size: 2rem;
-  }
-
-  .subtitle {
-    font-size: 1rem;
-  }
-
-  .books-image {
-    height: 15rem;
-  }
-
-  .start-button {
-    font-size: 1.5rem;
-    padding: 0.8rem 1.5rem;
-    margin: 0 1rem 1rem 1rem;
-  }
-}
-
-.container {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  width: 100vw;
-  padding: 0;
-  margin: 0;
-  
-}
-
-.blur {
-  filter: blur(5px);
-  transition: filter 0.2s ease;
-  pointer-events: none;
-  position: relative;
-}
-
-main.blur::after,
-.navbar.blur::after {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0,0,0,0);
-  z-index: 900;
-}
-
-.text-area {
-  max-width: 39vw;
-  margin: 0;
-  padding: 5rem 6rem 7rem 2rem;
-  text-align: left;
-  color: #1D2234;
-  font-family: inter, sans-serif;
-  opacity: 0;
-  transform: translateY(20px);
-  animation: fadeInUp 0.8s forwards;
-  animation-delay: 0.2s;
-  
-}
-
-.title {
-  font-size: 3.45rem;
-  font-weight: 600;
-  margin-bottom: 0.2rem;
-}
-
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-
-body.dark .title{
-  color: rgba(255, 255, 255, 0.87);
-}
-
-.title2 {
-  font-size: 5rem;
-  font-weight: 700;
-  margin-bottom: 0.8rem;
-  color: #E64756;
-}
-
-.subtitle {
-  font-size: 1.5rem;
-  font-weight: 400;
-  margin-bottom: 1rem;
-  max-width: 30vw;
-  color: black;
-}
-
-.image-area {
-  padding: 6rem 2rem 4rem 6rem;
-  opacity: 0;
-  transform: translateY(20px);
-  animation: fadeInUp 0.8s forwards;
-  animation-delay: 0.4s;
-}
-
-.books-image {
-  height: 45rem;
-}
-
-.start-button {
-  background: linear-gradient(90deg, #E64756, #ff6b81);
-  color: rgba(255, 255, 255, 0.87);
-  font-family: inter, sans-serif;
-  font-weight: 700;
-  letter-spacing: .5px;
-
-  padding: 1.4rem 3rem;
-  border-radius: 50px;
-  font-size: 2.25rem;
-
-  border: none;
-  cursor: pointer;
-  display: block;
-  margin: 1rem auto 2rem auto;
-  
-  width: fit-content;
-  transition: transform .2s ease, box-shadow .2s ease;
-
-  opacity: 0;
-  transform: translateY(20px);
-  animation: fadeInUp 0.8s forwards;
-  animation-delay: 0.6s;
-}
-
-body.dark .start-button {
-  background: linear-gradient(90deg, #e72a3d, #E64756);
-}
-
-.start-button:hover {
-  transform: translateY(-3px) scale(1.05);
-  box-shadow: 0px 16px 32px rgba(230, 71, 86, 0.4);
-}
-
-.start-button:active {
-  transform: scale(0.97);
-}
-
-.modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 10000; 
-  background-color: #fff;
-  border-radius: 18px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-  padding: 2rem;
-  max-width: 600px;
-  width: 90%;
-
-  opacity: 0;
-  animation: fadeInUp 0.5s forwards;
-}
-
-.modal input[type="file"] {
-  display: block;
-  margin: 1rem 0;
-}
-
-.modal button {
-  background-color: #e64756;
-  color: #fff;
-  border: none;
-  padding: 0.9rem 2rem;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-right: 0.5rem;
-}
-
-.modal button:hover {
-  transform: scale(1.05);
-}
-
-@keyframes fadeInUp {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (max-width: 1200px) {
-  .container {
-    flex-direction: column-reverse;
-    text-align: center;
-    padding: 4rem 0;
-  }
-
-  .text-area {
-    max-width: 90vw;
-    padding: 2rem;
-  }
-
-  .subtitle {
-    max-width: 100%;
-    font-size: 1.2rem;
-  }
-
-  .image-area {
-    padding: 2rem;
-  }
-
-  .books-image {
-    height: 20rem;
-  }
-
-  .title, .title2 {
-    font-size: 2.5rem;
-  }
-
-  .start-button {
-    font-size: 1.8rem;
-    padding: 1rem 2rem;
-  }
-}
-
-@media (max-width: 600px) {
-  .text-area, .image-area {
-    padding: 1rem;
-  }
-
-  .title, .title2 {
-    font-size: 2rem;
-  }
-
-  .subtitle {
-    font-size: 1rem;
   }
 
   .books-image {

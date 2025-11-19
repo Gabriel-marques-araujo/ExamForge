@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import NavBar from './Components/NavBar/NavBar';
 import FilesModal from './Components/FilesModal/FilesModal';
@@ -11,6 +11,14 @@ function App() {
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem("theme") === "dark";
   });
+  
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add("dark");
+    } else {
+      document.body.classList.remove("dark");
+    }
+  }, [darkMode]);
 
   return (
     <>
@@ -31,9 +39,12 @@ function App() {
               src={darkMode ? "/logo2-dark.svg" : "/logo2.svg"}
               alt="aluna com computador pensando em questionários"
               className="books-image"
+
             />
           </div>
+
         </div>
+
 
         <button className="start-button" onClick={() => setIsFilesModalOpen(true)}>
           CRIE SEU SIMULADO AGORA!
