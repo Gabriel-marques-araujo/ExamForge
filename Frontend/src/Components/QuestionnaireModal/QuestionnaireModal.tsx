@@ -23,6 +23,13 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
 
   const isFormValid = topic.trim().length > 0;
 
+  const incrementQuestions = () => setNumQuestions(prev => Math.min(prev + 1, MAX_QUESTIONS));
+  const decrementQuestions = () => setNumQuestions(prev => Math.max(prev - 1, 1));
+
+  const incrementTime = () => setTimeMinutes(prev => Math.min(prev + 1, MAX_TIME));
+  const decrementTime = () => setTimeMinutes(prev => Math.max(prev - 1, 1));
+
+
   const handleCreate = async () => {
     setLoading(true);
   const payload = {
@@ -72,52 +79,69 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
       <div className="config-container">
 
         <div className="config-row">
-          <label>Número de Questões</label>
-          <p className="max-limit-info">Máximo: {MAX_QUESTIONS} questões</p>
-          <div className="slider-container">
+          <label>Número de Questões:</label>
+          <div className="input-with-buttons">
+            <button className="circle-btn" onClick={decrementQuestions}>-</button>
             <input
-              type="range"
+              type="number"
+              value={numQuestions}
+              onChange={(e) => {
+                let value = Number(e.target.value);
+                if (value < 1) value = 1;
+                if (value > MAX_QUESTIONS) value = MAX_QUESTIONS;
+                setNumQuestions(value);
+              }}
               min="1"
               max={MAX_QUESTIONS}
-              value={numQuestions}
-              onChange={(e) => setNumQuestions(Number(e.target.value))}
-              className="slider"
             />
-            <span className="slider-value">{numQuestions}</span>
+            <button className="circle-btn" onClick={incrementQuestions}>+</button>
           </div>
+          <div className="max-info">Máximo de {MAX_QUESTIONS} questões por simulado</div>
         </div>
 
         <div className="config-row">
-          <label>Tempo Limite (minutos)</label>
-          <p className="max-limit-info">Máximo: {MAX_TIME} minutos</p>
-          <div className="slider-container">
+          <label>Tempo Limite (minutos):</label>
+          <div className="input-with-buttons">
+            <button className="circle-btn" onClick={decrementTime}>-</button>
             <input
-              type="range"
+              type="number"
+              value={timeMinutes}
+              onChange={(e) => {
+                let value = Number(e.target.value);
+                if (value < 1) value = 1;
+                if (value > MAX_TIME) value = MAX_TIME;
+                setTimeMinutes(value);
+              }}
               min="1"
               max={MAX_TIME}
-              value={timeMinutes}
-              onChange={(e) => setTimeMinutes(Number(e.target.value))}
-              className="slider"
             />
-            <span className="slider-value">{timeMinutes}</span>
+            <button className="circle-btn" onClick={incrementTime}>+</button>
           </div>
+          <div className="max-info">Máximo de {MAX_TIME} minutos por simulado</div>
         </div>
+
 
         <div className="config-row">
           <label>Matéria / Tópico</label>
 
-          <input
+          <textarea
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             placeholder="Ex: Inteligência Artificial, História do Brasil, Matemática..."
             className="topic-area"
             maxLength={MAX_INSTRUCTIONS}
           />
-
-          <div className="char-count">
-            {topic.length}/{MAX_INSTRUCTIONS} caracteres
-          </div>
-
+          <div
+            style={{
+              textAlign: "right",
+              fontSize: "1rem",
+              
+              marginTop: "0.25rem",
+              fontFamily: "inter, sans-serif",
+            }}
+          >
+           {topic.length}/{MAX_INSTRUCTIONS} caracteres
+           </div>
          </div>
       </div>
 
@@ -127,13 +151,13 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
         <button
           className="attach-button"
           onClick={handleCreate}
-          disabled={!isFormValid}
+          disabled={!isFormValid || loading}
           style={{
-            opacity: isFormValid ? 1 : 0.5,
-            cursor: isFormValid ? "pointer" : "not-allowed",
+            opacity: (isFormValid && !loading) ? 1 : 0.5,
+            cursor: (isFormValid && !loading) ? "pointer" : "not-allowed",
           }}
         >
-          Gerar {numQuestions} questões
+          {loading ? "Gerando..." : `Gerar ${numQuestions} questões`}
         </button>
       </div>
     </div>

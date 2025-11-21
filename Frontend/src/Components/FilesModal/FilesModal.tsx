@@ -16,21 +16,19 @@ interface UploadedFile {
 const FilesModal: React.FC<FilesModalProps> = ({ onClose, onNext }) => {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = event.target.files;
-    if (!selectedFiles) return;
-
+  const processFiles = (fileList: FileList) => {
     const newFiles: UploadedFile[] = [];
 
-    for (let i = 0; i < selectedFiles.length; i++) {
-      const file = selectedFiles[i];
+    const validTypes = [
+      "application/pdf",
+      "text/plain",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ];
 
-      const validTypes = [
-        "application/pdf",
-        "text/plain",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-      ];
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
 
       if (!validTypes.includes(file.type)) {
         setErrorMessage(`Arquivo "${file.name}" não suportado`);
@@ -53,14 +51,14 @@ const FilesModal: React.FC<FilesModalProps> = ({ onClose, onNext }) => {
       const interval = setInterval(() => {
         setFiles(prevFiles => {
           const updatedFiles = [...prevFiles];
-          const indexInState = prevFiles.findIndex(pf => pf.file.name === f.file.name);
+          const index = updatedFiles.findIndex(p => p.file.name === f.file.name);
 
-          if (indexInState !== -1) {
-            if (updatedFiles[indexInState].progress >= 100) {
-              updatedFiles[indexInState].progress = 100;
+          if (index !== -1) {
+            if (updatedFiles[index].progress >= 100) {
+              updatedFiles[index].progress = 100;
               clearInterval(interval);
             } else {
-              updatedFiles[indexInState].progress += 5;
+              updatedFiles[index].progress += 5;
             }
           }
 
@@ -68,29 +66,48 @@ const FilesModal: React.FC<FilesModalProps> = ({ onClose, onNext }) => {
         });
       }, 100);
     });
-
-    newFiles.forEach(async(f) =>{
+    newFiles.forEach(async f => {
       const formData = new FormData();
-      formData.append("file",f.file);
+      formData.append("file", f.file);
 
-      try{
-
+      try {
         await axios.post("http://localhost:8000/base/upload/", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+          headers: { "Content-Type": "multipart/form-data" },
+        });
 
-      console.log('Upload concluido para ${f.file.name}');
+        console.log(`Upload concluído para ${f.file.name}`);
 
-      await axios.post("http://localhost:8000/base/create/");
-      console.log('Vetorização inciada para ${f.file.name}');
-      }catch(error){
-       console.error("Erro ao enviar arquivo:", error);
-       setErrorMessage(`Erro ao enviar "${f.file.name}"`);
+        await axios.post("http://localhost:8000/base/create/");
+        console.log(`Vetorização iniciada para ${f.file.name}`);
+      } catch (error) {
+        console.error("Erro ao enviar arquivo:", error);
+        setErrorMessage(`Erro ao enviar "${f.file.name}"`);
       }
     });
 
     setTimeout(() => setErrorMessage(""), 3000);
   };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files) return;
+    processFiles(event.target.files);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files.length > 0) {
+      processFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
+  const handleDragEnter = () => setIsDragging(true);
+  const handleDragLeave = () => setIsDragging(false);
 
   const handleRemoveFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
@@ -119,7 +136,13 @@ const FilesModal: React.FC<FilesModalProps> = ({ onClose, onNext }) => {
         Carregue e anexe arquivos a este projeto.
       </div>
 
-      <div className="upload-area">
+      <div
+        className={`upload-area ${isDragging ? "dragging" : ""}`}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+      >
         <label htmlFor="file-input">
           <img src="/upload-icon.svg" alt="ícone de upload" className="upload-icon" />
           <div className="upload-text">
@@ -127,6 +150,7 @@ const FilesModal: React.FC<FilesModalProps> = ({ onClose, onNext }) => {
           </div>
           <div className="file-types-text">PDF, TXT ou DOCX (max. 25MB)</div>
         </label>
+
         <input
           id="file-input"
           type="file"
@@ -136,8 +160,11 @@ const FilesModal: React.FC<FilesModalProps> = ({ onClose, onNext }) => {
         />
       </div>
 
-      {errorMessage && <div style={{ color: "#E64756", marginTop: "0.5rem" }}>{errorMessage}</div>}
-
+      {errorMessage && (
+        <div style={{ color: "#E64756", marginTop: "0.5rem" }}>
+          {errorMessage}
+        </div>
+      )}
       {files.length > 0 && (
         <div
           className="uploaded-files-container"
@@ -183,7 +210,6 @@ const FilesModal: React.FC<FilesModalProps> = ({ onClose, onNext }) => {
           ))}
         </div>
       )}
-
       <div className="footer-modal">
         <button className="cancel-button" onClick={onClose}>Cancelar</button>
         <button
