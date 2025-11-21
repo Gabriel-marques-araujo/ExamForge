@@ -2,7 +2,16 @@ body {
   margin: 0;
   font-family: "Inter", sans-serif;
   overflow-x: hidden;
-  background-color: #ffffff;
+}
+
+.container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  padding: 0;
+  margin: 0;
 }
 
 .blur {
@@ -24,28 +33,13 @@ main.blur::after,
   z-index: 900;
 }
 
-main {
-  width: 100%;
-  margin: 0;
-  padding: 0;
-}
-
-.container {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  padding: 0;
-  margin: 0;
-}
-
 .text-area {
   max-width: 39vw;
   margin: 0;
   padding: 5rem 6rem 7rem 2rem;
   text-align: left;
   color: #1D2234;
+  font-family: inter, sans-serif;
   opacity: 0;
   transform: translateY(20px);
   animation: fadeInUp 0.8s forwards;
@@ -56,6 +50,17 @@ main {
   font-size: 3.45rem;
   font-weight: 600;
   margin-bottom: 0.2rem;
+}
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+
+body.dark .title{
+  color: rgba(255, 255, 255, 0.87);
 }
 
 .title2 {
@@ -70,15 +75,7 @@ main {
   font-weight: 400;
   margin-bottom: 1rem;
   max-width: 30vw;
-  color: black;
-}
-
-body.dark .title {
-  color: rgba(255, 255, 255, 0.87);
-}
-
-body.dark .subtitle {
-  color: rgba(255, 255, 255, 0.75);
+  color: #2a70c0;
 }
 
 .image-area {
@@ -91,7 +88,6 @@ body.dark .subtitle {
 
 .books-image {
   height: 35rem;
-    width: auto;
 }
 
 .start-button {
@@ -100,15 +96,19 @@ body.dark .subtitle {
   font-family: inter, sans-serif;
   font-weight: 700;
   letter-spacing: .5px;
+
   padding: 1.4rem 3rem;
   border-radius: 50px;
   font-size: 2.25rem;
+
   border: none;
   cursor: pointer;
   display: block;
   margin: 1rem auto 2rem auto;
+  
   width: fit-content;
   transition: transform .2s ease, box-shadow .2s ease;
+
   opacity: 0;
   transform: translateY(20px);
   animation: fadeInUp 0.8s forwards;
@@ -185,6 +185,11 @@ body.dark .start-button {
     padding: 2rem;
   }
 
+  .subtitle {
+    max-width: 100%;
+    font-size: 1.2rem;
+  }
+
   .image-area {
     padding: 2rem;
   }
@@ -210,6 +215,10 @@ body.dark .start-button {
 
   .title, .title2 {
     font-size: 2rem;
+  }
+
+  .subtitle {
+    font-size: 1rem;
   }
 
   .books-image {

@@ -12,6 +12,8 @@
     border-radius: 30px;
     flex-direction: column;
     padding: 1.5rem;
+    border: #1D2234 0.1px solid;
+    
 }
 
 body.dark .files-modal{
@@ -48,6 +50,7 @@ body.dark .title-modal{
     justify-content: space-between;
     flex-direction: row;
     font-size: 1rem;
+}
 
 .subtitle-modal{
     font-size: 1.2rem;
