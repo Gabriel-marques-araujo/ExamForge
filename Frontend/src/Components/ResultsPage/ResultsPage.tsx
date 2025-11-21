@@ -1,4 +1,3 @@
-import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import NavBar from "../NavBar/NavBar";
 import "./ResultsPage.css";
@@ -9,20 +8,12 @@ const ResultsPage = () => {
 
   const {
     score = 10.0,
-    totalQuestions = 20,
-    correctAnswers = 13,
-    wrongAnswers = 7,
+    totalQuestions = 10,
+    correctAnswers = 10,
+    wrongAnswers = 0,
   } = location.state || {};
 
   const handleBackToStart = () => navigate("/");
-  const handleReviewAnswers = () => {
-    navigate("/review", {
-      state: {
-        questions: location.state?.questions,
-        userAnswers: location.state?.userAnswers,
-      },
-    });
-  };
 
 const handleRetake = () => {
   navigate("/questions", {
@@ -108,10 +99,16 @@ const handleExportPDF = async () => {
               </div>
             </div>
 
+            <div className="feedback-area">
+              <h2>Avaliação de Desempenho</h2>
+              <p className="feedback-text">
+                Com base nas suas respostas, percebi que você precisa reforçar seus estudos em <strong>Programação Orientada a Objetos (POO).</strong><br />
+                Você demonstrou dificuldade em conceitos como <strong>abstração, encapsulamento e herança</strong>, especialmente ao indentificar quando cada um deve ser aplicado.<br />
+                <strong>Sugestão:</strong> revise exemplos práticos de classes e objetos, pratique a criação de modelos simples e tente resolver exercícios que envolvam relacionar classes entre si. Isso vai ajudar a fixar melhor esses conceitos.
+              </p>
+            </div>
+
             <div className="results-actions">
-              <button className="result-button" onClick={handleReviewAnswers}>
-                Revisar Respostas
-              </button>
 
               <button className="result-button" onClick={handleRetake}>
                 Refazer Simulado

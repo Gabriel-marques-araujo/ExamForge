@@ -12,19 +12,23 @@ interface QuestionnaireModalProps {
 const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack, initialFiles }) => {
   const navigate = useNavigate();
 
-  const [numQuestions, setNumQuestions] = useState(1);
+  const [numQuestions, setNumQuestions] = useState(5);
   const [timeMinutes, setTimeMinutes] = useState(10);
   const [topic, setTopic] = useState("");
   const [loading, setLoading] = useState(false);
 
   const MAX_QUESTIONS = 15;
   const MAX_TIME = 120;
-  const MAX_INSTRUCTIONS = 240;
+  const MAX_INSTRUCTIONS = 80;
+
+  const isFormValid = topic.trim().length > 0;
 
   const incrementQuestions = () => setNumQuestions(prev => Math.min(prev + 1, MAX_QUESTIONS));
   const decrementQuestions = () => setNumQuestions(prev => Math.max(prev - 1, 1));
 
-  const isFormValid = topic.trim().length > 0;
+  const incrementTime = () => setTimeMinutes(prev => Math.min(prev + 1, MAX_TIME));
+  const decrementTime = () => setTimeMinutes(prev => Math.max(prev - 1, 1));
+
 
   const handleCreate = async () => {
     setLoading(true);
@@ -69,10 +73,11 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
       </div>
 
       <div className="subtitle-modal">
-        Configure o número de questões, tempo máximo e instruções para o simulado.
+        Configure o número de questões, tempo máximo e o tópico do simulado.
       </div>
 
       <div className="config-container">
+
         <div className="config-row">
           <label>Número de Questões:</label>
           <div className="input-with-buttons">
@@ -115,26 +120,45 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
           <div className="max-info">Máximo de {MAX_TIME} minutos por simulado</div>
         </div>
 
+
         <div className="config-row">
           <label>Matéria / Tópico</label>
 
-          <input
+          <textarea
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             placeholder="Ex: Inteligência Artificial, História do Brasil, Matemática..."
             className="topic-area"
             maxLength={MAX_INSTRUCTIONS}
           />
-
-          <div className="char-count">
-            {topic.length}/{MAX_INSTRUCTIONS} caracteres
-          </div>
-        </div>
+          <div
+            style={{
+              textAlign: "right",
+              fontSize: "1rem",
+              
+              marginTop: "0.25rem",
+              fontFamily: "inter, sans-serif",
+            }}
+          >
+           {topic.length}/{MAX_INSTRUCTIONS} caracteres
+           </div>
+         </div>
       </div>
 
       <div className="footer-modal" style={{ marginTop: "2rem" }}>
         <button className="cancel-button" onClick={onBack}>Voltar</button>
-        <button className="attach-button" onClick={handleCreate}>Criar</button>
+
+        <button
+          className="attach-button"
+          onClick={handleCreate}
+          disabled={!isFormValid || loading}
+          style={{
+            opacity: (isFormValid && !loading) ? 1 : 0.5,
+            cursor: (isFormValid && !loading) ? "pointer" : "not-allowed",
+          }}
+        >
+          {loading ? "Gerando..." : `Gerar ${numQuestions} questões`}
+        </button>
       </div>
     </div>
   );

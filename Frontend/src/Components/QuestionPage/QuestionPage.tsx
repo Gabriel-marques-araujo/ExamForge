@@ -53,6 +53,14 @@ const QuestionsPage: React.FC = () => {
     }));
   }, [generatedQuestions]);
 
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: string }>({});
+  const [timeLeft, setTimeLeft] = useState(timeMinutes * 60);
+  const [isTimeOver, setIsTimeOver] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [results, setResults] = useState<{ [key: number]: any }>({});
+
   if (questions.length === 0) {
     return (
       <div className="questions-container">
@@ -67,19 +75,12 @@ const QuestionsPage: React.FC = () => {
     );
   }
 
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: string }>({});
-  const [timeLeft, setTimeLeft] = useState(timeMinutes * 60);
-  const [isTimeOver, setIsTimeOver] = useState(false);
-  const [showWarning, setShowWarning] = useState(false);
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [results, setResults] = useState<{ [key: number]: any }>({});
-
   useEffect(() => {
     if (timeLeft <= 0) {
       setIsTimeOver(true);
       return;
     }
+
     const interval = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
     return () => clearInterval(interval);
   }, [timeLeft]);
@@ -92,6 +93,7 @@ const QuestionsPage: React.FC = () => {
 
   const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+  const feedback = results[currentQuestion.id];
 
   const handleSelect = (questionId: number, option: string) => {
     setSelectedAnswers((prev) => ({ ...prev, [questionId]: option }));
@@ -112,13 +114,14 @@ const QuestionsPage: React.FC = () => {
 
   const handleNext = async () => {
     const chosenOption = selectedAnswers[currentQuestion.id];
+
     if (!chosenOption) {
       setShowWarning(true);
       return;
     }
+
     setShowWarning(false);
 
-    // Se já existe feedback, ir para próxima
     if (showFeedback) {
       setShowFeedback(false);
       if (currentQuestionIndex < questions.length - 1) {
@@ -129,7 +132,6 @@ const QuestionsPage: React.FC = () => {
       return;
     }
 
-   
     const result = await checkAnswer(currentQuestion, chosenOption);
     if (result) {
       setResults((prev) => ({ ...prev, [currentQuestion.id]: result }));
@@ -139,32 +141,34 @@ const QuestionsPage: React.FC = () => {
   };
 
   const handleBack = () => {
-    if (currentQuestionIndex > 0) setCurrentQuestionIndex((prev) => prev - 1);
+    if (currentQuestionIndex > 0) {
+      setShowFeedback(false);
+      setCurrentQuestionIndex((prev) => prev - 1);
+    }
   };
 
   const handleSubmit = () => {
     const correct = Object.values(results).filter((r) => r.is_correct).length;
     const totalQuestions = questions.length;
-    
-    const score  = (correct / totalQuestions) * 10;
+
+    const score = (correct / totalQuestions) * 10;
     const wrong = totalQuestions - correct;
 
     navigate("/resultado", {
       state: {
         score,
-        totalQuestions: questions.length,
+        totalQuestions,
         correctAnswers: correct,
         wrongAnswers: wrong,
         questions,
         userAnswers: selectedAnswers,
         timeMinutes,
-        topic: location.state?.topic || "Geral",
-        initialFiles: location.state?.initialFiles || [],
+        topic,
+        initialFiles: state?.initialFiles || [],
         results,
       },
     });
   };
-const feedback = results[currentQuestion.id];
 
   return (
     <>
@@ -179,7 +183,11 @@ const feedback = results[currentQuestion.id];
             </div>
 
             <div className="timer-section">
-              <span className="label">Tempo Restante:</span>
+              <span className="label"><img
+              src="/clock.svg"
+              alt="relógio"
+              className="clock"
+              /> Tempo Restante:</span>
               <span className="value">{formatTime(timeLeft)}</span>
             </div>
           </div>
@@ -192,12 +200,15 @@ const feedback = results[currentQuestion.id];
             <div className="question-header">
               <div className="question-number">{currentQuestion.id}</div>
               <p className="question-text">{currentQuestion.enunciado}</p>
-
-              {showWarning && (
-                <p className="warning-text">⚠️ Selecione uma alternativa para continuar.</p>
-              )}
+              <button className="new-question-button">
+                Nova Questão
+              </button>
             </div>
           </div>
+          {showWarning && (
+            <p className="warning-text">⚠️ Selecione uma alternativa para continuar.</p>
+          )}
+            
 
           <div className="options">
             {currentQuestion.alternativas.map((alt: any, idx: number) => {
@@ -205,9 +216,11 @@ const feedback = results[currentQuestion.id];
               return (
                 <label
                   key={idx}
-                  className={`option-box ${
-                    selectedAnswers[currentQuestion.id] === text ? "selected" : ""
-                  }`}
+                  className={`option-box 
+                    ${selectedAnswers[currentQuestion.id] === text ? "selected" : ""} 
+                    ${showFeedback && feedback?.is_correct && selectedAnswers[currentQuestion.id] === text ? "correct" : ""}
+                    ${showFeedback && !feedback?.is_correct && selectedAnswers[currentQuestion.id] === text ? "wrong" : ""}
+                  `}
                   onClick={() => handleSelect(currentQuestion.id, text)}
                 >
                   <input
@@ -225,15 +238,36 @@ const feedback = results[currentQuestion.id];
           </div>
 
           {showFeedback && feedback && (
-            <div className="feedback">
-              <p><strong>Resposta:</strong> {feedback.is_correct ? "✔️ Correta" : "❌ Incorreta"}</p>
-              <p><strong>Alternativa escolhida:</strong> {feedback.chosen_option}</p>
-              <p><strong>Explicação:</strong> {feedback.is_correct ? feedback.explanation : feedback.explanation_chosen}</p>
+            <div
+              className={`feedback ${
+                feedback.is_correct ? "feedback-correto" : "feedback-incorreto"
+              }`}
+            >
+              <p>
+                <strong>Resposta:</strong>{" "}
+                {feedback.is_correct ? "✔️ Correta" : "❌ Incorreta"}
+              </p>
+
+              <p>
+                <strong>Alternativa escolhida:</strong> {feedback.chosen_option}
+              </p>
+
+              <p>
+                <strong>Explicação:</strong>{" "}
+                {feedback.is_correct
+                  ? feedback.explanation
+                  : feedback.explanation_chosen}
+              </p>
 
               {!feedback.is_correct && (
                 <>
-                  <p><strong>Alternativa correta:</strong> {feedback.correct_option}</p>
-                  <p><strong>Por que está correta:</strong> {feedback.explanation_correct}</p>
+                  <p>
+                    <strong>Alternativa correta:</strong> {feedback.correct_option}
+                  </p>
+                  <p>
+                    <strong>Por que está correta:</strong>{" "}
+                    {feedback.explanation_correct}
+                  </p>
                 </>
               )}
             </div>
@@ -273,4 +307,5 @@ const feedback = results[currentQuestion.id];
     </>
   );
 };
+
 export default QuestionsPage;

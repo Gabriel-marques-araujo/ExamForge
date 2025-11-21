@@ -16,7 +16,7 @@ const NavBar: React.FC<NavBarProps> = ({ className, onThemeChange }) => {
   useEffect(() => {
     document.body.classList.toggle("dark", darkMode);
     localStorage.setItem("theme", darkMode ? "dark" : "light");
-  if (onThemeChange) onThemeChange(darkMode); // ← avisa o App
+  if (onThemeChange) onThemeChange(darkMode);
   }, [darkMode, onThemeChange]);
 
 
@@ -26,7 +26,7 @@ const NavBar: React.FC<NavBarProps> = ({ className, onThemeChange }) => {
         <div
           className="navbar-title"
           style={{ cursor: "pointer" }}
-          onClick={() => navigate("/")} // vai para a página inicial ao clicar
+          onClick={() => navigate("/")}
         >
           <img src="/title.svg" alt="ExamForge" className="navbar-logo" />
         </div>
