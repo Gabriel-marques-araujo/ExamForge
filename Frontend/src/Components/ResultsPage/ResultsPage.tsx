@@ -56,6 +56,47 @@ const handleExportPDF = async () => {
   }
 };
 
+const handleRetake = () => {
+  navigate("/questions", {
+    state: {
+      numQuestions: location.state?.questions?.length || 5,
+      timeMinutes: location.state?.timeMinutes,
+      instructions: location.state?.instructions,
+      initialFiles: location.state?.initialFiles,
+    },
+  });
+};
+const handleExportPDF = async () => {
+  try {
+    const { jsPDF } = await import("jspdf");
+    const elemento = document.getElementById("reviewContent");
+
+    if (!elemento) {
+      alert("Erro: elemento 'reviewContent' não encontrado!");
+      return;
+    }
+
+    const doc = new jsPDF({
+      orientation: "p",
+      unit: "mm",
+      format: "a4",
+    });
+
+    await doc.html(elemento, {
+      callback: (doc) => {
+        doc.save("revisao.pdf");
+      },
+      x: 10,
+      y: 10,
+      width: 190,
+      windowWidth: 900,
+    });
+  } catch (error) {
+    console.error("Erro ao exportar PDF:", error);
+    alert("Ocorreu um erro ao gerar o PDF.");
+  }
+};
+
 
   return (
     <>

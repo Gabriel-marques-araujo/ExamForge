@@ -23,13 +23,6 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
 
   const isFormValid = topic.trim().length > 0;
 
-  const incrementQuestions = () => setNumQuestions(prev => Math.min(prev + 1, MAX_QUESTIONS));
-  const decrementQuestions = () => setNumQuestions(prev => Math.max(prev - 1, 1));
-
-  const incrementTime = () => setTimeMinutes(prev => Math.min(prev + 1, MAX_TIME));
-  const decrementTime = () => setTimeMinutes(prev => Math.max(prev - 1, 1));
-
-
   const handleCreate = async () => {
     setLoading(true);
   const payload = {
@@ -41,6 +34,16 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
     const response = await axios.post("http://localhost:8000/rag/generate_mcq/", payload);
     console.log("MCQs gerados:", response.data);
 
+  const handleCreate = async () => {
+    setLoading(true);
+  const payload = {
+    topic: topic,
+    qnt_questoes: numQuestions,
+  };
+
+  try {
+    const response = await axios.post("http://localhost:8000/rag/generate_mcq/", payload);
+    console.log("MCQs gerados:", response.data);
     navigate("/questions", {
       state: {
         numQuestions,
@@ -79,52 +82,41 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
       <div className="config-container">
 
         <div className="config-row">
-          <label>Número de Questões:</label>
-          <div className="input-with-buttons">
-            <button className="circle-btn" onClick={decrementQuestions}>-</button>
+          <label>Número de Questões</label>
+          <p className="max-limit-info">Máximo: {MAX_QUESTIONS} questões</p>
+          <div className="slider-container">
             <input
-              type="number"
-              value={numQuestions}
-              onChange={(e) => {
-                let value = Number(e.target.value);
-                if (value < 1) value = 1;
-                if (value > MAX_QUESTIONS) value = MAX_QUESTIONS;
-                setNumQuestions(value);
-              }}
+              type="range"
               min="1"
               max={MAX_QUESTIONS}
+              value={numQuestions}
+              onChange={(e) => setNumQuestions(Number(e.target.value))}
+              className="slider"
             />
-            <button className="circle-btn" onClick={incrementQuestions}>+</button>
+            <span className="slider-value">{numQuestions}</span>
           </div>
-          <div className="max-info">Máximo de {MAX_QUESTIONS} questões por simulado</div>
         </div>
 
         <div className="config-row">
-          <label>Tempo Limite (minutos):</label>
-          <div className="input-with-buttons">
-            <button className="circle-btn" onClick={decrementTime}>-</button>
+          <label>Tempo Limite (minutos)</label>
+          <p className="max-limit-info">Máximo: {MAX_TIME} minutos</p>
+          <div className="slider-container">
             <input
-              type="number"
-              value={timeMinutes}
-              onChange={(e) => {
-                let value = Number(e.target.value);
-                if (value < 1) value = 1;
-                if (value > MAX_TIME) value = MAX_TIME;
-                setTimeMinutes(value);
-              }}
+              type="range"
               min="1"
               max={MAX_TIME}
+              value={timeMinutes}
+              onChange={(e) => setTimeMinutes(Number(e.target.value))}
+              className="slider"
             />
-            <button className="circle-btn" onClick={incrementTime}>+</button>
+            <span className="slider-value">{timeMinutes}</span>
           </div>
-          <div className="max-info">Máximo de {MAX_TIME} minutos por simulado</div>
         </div>
 
 
         <div className="config-row">
           <label>Matéria / Tópico</label>
-
-          <textarea
+          <input
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             placeholder="Ex: Inteligência Artificial, História do Brasil, Matemática..."
@@ -135,7 +127,6 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
             style={{
               textAlign: "right",
               fontSize: "1rem",
-              
               marginTop: "0.25rem",
               fontFamily: "inter, sans-serif",
             }}

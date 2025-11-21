@@ -114,14 +114,12 @@ const QuestionsPage: React.FC = () => {
 
   const handleNext = async () => {
     const chosenOption = selectedAnswers[currentQuestion.id];
-
     if (!chosenOption) {
       setShowWarning(true);
       return;
     }
 
     setShowWarning(false);
-
     if (showFeedback) {
       setShowFeedback(false);
       if (currentQuestionIndex < questions.length - 1) {
@@ -131,6 +129,7 @@ const QuestionsPage: React.FC = () => {
       }
       return;
     }
+
 
     const result = await checkAnswer(currentQuestion, chosenOption);
     if (result) {
@@ -150,25 +149,25 @@ const QuestionsPage: React.FC = () => {
   const handleSubmit = () => {
     const correct = Object.values(results).filter((r) => r.is_correct).length;
     const totalQuestions = questions.length;
-
     const score = (correct / totalQuestions) * 10;
     const wrong = totalQuestions - correct;
 
     navigate("/resultado", {
       state: {
         score,
-        totalQuestions,
+        totalQuestions: questions.length,
         correctAnswers: correct,
         wrongAnswers: wrong,
         questions,
         userAnswers: selectedAnswers,
         timeMinutes,
-        topic,
-        initialFiles: state?.initialFiles || [],
+        topic: location.state?.topic || "Geral",
+        initialFiles: location.state?.initialFiles || [],
         results,
       },
     });
   };
+const feedback = results[currentQuestion.id];
 
   return (
     <>
@@ -307,5 +306,4 @@ const QuestionsPage: React.FC = () => {
     </>
   );
 };
-
 export default QuestionsPage;
