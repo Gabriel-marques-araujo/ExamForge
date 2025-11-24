@@ -3,7 +3,7 @@ import NavBar from "../NavBar/NavBar";
 import "./ResultsPage.css";
 
 const ResultsPage = () => {
-  const location = useLocation();
+  const location = useLocation(); 
   const navigate = useNavigate();
 
   const {
@@ -11,20 +11,27 @@ const ResultsPage = () => {
     totalQuestions = 10,
     correctAnswers = 10,
     wrongAnswers = 0,
+    questions = [],        
+    timeMinutes,
+    topic,
+    initialFiles,
   } = location.state || {};
 
   const handleBackToStart = () => navigate("/");
 
-const handleRetake = () => {
-  navigate("/questions", {
-    state: {
-      numQuestions: location.state?.questions?.length || 5,
-      timeMinutes: location.state?.timeMinutes,
-      instructions: location.state?.instructions,
-      initialFiles: location.state?.initialFiles,
-    },
-  });
-};
+  const handleRetake = () => {
+    navigate("/questions", {
+      state: {
+        timeMinutes,
+        topic,
+        initialFiles,
+
+        
+        generatedQuestions: questions.map((q: { rawData: any; }) => q.rawData || q),
+      },
+    });
+  };
+
 const handleExportPDF = async () => {
   try {
     const { jsPDF } = await import("jspdf");

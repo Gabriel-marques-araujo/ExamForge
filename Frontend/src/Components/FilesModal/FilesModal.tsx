@@ -10,6 +10,7 @@ interface FilesModalProps {
 interface UploadedFile {
   file: File;
   progress: number;
+  uploaded: boolean;
   error?: string;
 }
 
@@ -17,6 +18,7 @@ const FilesModal: React.FC<FilesModalProps> = ({ onClose, onNext }) => {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
+  const [isCreatingBase, setIsCreatingBase] = useState(false);
 
   const processFiles = (fileList: FileList) => {
     const newFiles: UploadedFile[] = [];
@@ -40,52 +42,60 @@ const FilesModal: React.FC<FilesModalProps> = ({ onClose, onNext }) => {
         continue;
       }
 
-      newFiles.push({ file, progress: 0 });
+      newFiles.push({ file, progress: 0, uploaded: false });
     }
 
     if (newFiles.length === 0) return;
 
     setFiles(prev => [...prev, ...newFiles]);
 
-    newFiles.forEach(f => {
-      const interval = setInterval(() => {
-        setFiles(prevFiles => {
-          const updatedFiles = [...prevFiles];
-          const index = updatedFiles.findIndex(p => p.file.name === f.file.name);
+    // Start upload for each new file
+    newFiles.forEach(uploadFile);
+  };
 
-          if (index !== -1) {
-            if (updatedFiles[index].progress >= 100) {
-              updatedFiles[index].progress = 100;
-              clearInterval(interval);
-            } else {
-              updatedFiles[index].progress += 5;
-            }
+  const uploadFile = async (f: UploadedFile) => {
+    const interval = setInterval(() => {
+      setFiles(prevFiles => {
+        const updatedFiles = [...prevFiles];
+        const index = updatedFiles.findIndex(p => p.file.name === f.file.name);
+
+        if (index !== -1) {
+          if (updatedFiles[index].progress >= 100) {
+            updatedFiles[index].progress = 100;
+            clearInterval(interval);
+          } else {
+            updatedFiles[index].progress += 5;
           }
+        }
 
-          return updatedFiles;
-        });
-      }, 100);
-    });
-    newFiles.forEach(async f => {
-      const formData = new FormData();
-      formData.append("file", f.file);
+        return updatedFiles;
+      });
+    }, 100);
 
-      try {
-        await axios.post("http://localhost:8000/base/upload/", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+    const formData = new FormData();
+    formData.append("file", f.file);
 
-        console.log(`Upload concluído para ${f.file.name}`);
+    try {
+      await axios.post("http://localhost:8000/base/upload/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
-        await axios.post("http://localhost:8000/base/create/");
-        console.log(`Vetorização iniciada para ${f.file.name}`);
-      } catch (error) {
-        console.error("Erro ao enviar arquivo:", error);
-        setErrorMessage(`Erro ao enviar "${f.file.name}"`);
-      }
-    });
+      setFiles(prevFiles =>
+        prevFiles.map(file =>
+          file.file.name === f.file.name ? { ...file, uploaded: true, progress: 100 } : file
+        )
+      );
 
-    setTimeout(() => setErrorMessage(""), 3000);
+    } catch (error) {
+      console.error("Erro ao enviar arquivo:", error);
+      setFiles(prevFiles =>
+        prevFiles.map(file =>
+          file.file.name === f.file.name ? { ...file, error: "Erro ao enviar" } : file
+        )
+      );
+      setErrorMessage(`Erro ao enviar "${f.file.name}"`);
+      setTimeout(() => setErrorMessage(""), 3000);
+    }
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,16 +106,12 @@ const FilesModal: React.FC<FilesModalProps> = ({ onClose, onNext }) => {
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
-
     if (e.dataTransfer.files.length > 0) {
       processFiles(e.dataTransfer.files);
     }
   };
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-  };
-
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => e.preventDefault();
   const handleDragEnter = () => setIsDragging(true);
   const handleDragLeave = () => setIsDragging(false);
 
@@ -113,15 +119,24 @@ const FilesModal: React.FC<FilesModalProps> = ({ onClose, onNext }) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleNextClick = () => {
-    const fileObjects = files
-      .filter(f => f.progress === 100)
-      .map(f => f.file);
+  const handleNextClick = async () => {
+    const allUploaded = files.every(f => f.uploaded);
+    if (!allUploaded) return;
 
-    if (fileObjects.length > 0) {
-      onNext(fileObjects);
+    setIsCreatingBase(true);
+    try {
+      await axios.post("http://localhost:8000/base/create/");
+      console.log("Vetorização concluída para todos os arquivos");
+      onNext(files.map(f => f.file));
+    } catch (error) {
+      console.error("Erro ao criar base:", error);
+      setErrorMessage("Erro ao criar base vetorial");
+    } finally {
+      setIsCreatingBase(false);
     }
   };
+
+  const disableNext = files.length === 0 || files.some(f => !f.uploaded) || isCreatingBase;
 
   return (
     <div className="files-modal">
@@ -165,6 +180,7 @@ const FilesModal: React.FC<FilesModalProps> = ({ onClose, onNext }) => {
           {errorMessage}
         </div>
       )}
+
       {files.length > 0 && (
         <div
           className="uploaded-files-container"
@@ -174,10 +190,10 @@ const FilesModal: React.FC<FilesModalProps> = ({ onClose, onNext }) => {
             <div key={index} className="uploaded-file">
               <div className="file-row">
                 <div className="file-icon">
-                  {f.progress < 100 ? (
-                    <img src="/file-upload-icon2.svg" alt="Arquivo" />
-                  ) : (
+                  {f.uploaded ? (
                     <img src="/file-upload-icon.svg" alt="Arquivo" />
+                  ) : (
+                    <img src="/file-upload-icon2.svg" alt="Arquivo" />
                   )}
                 </div>
 
@@ -186,13 +202,13 @@ const FilesModal: React.FC<FilesModalProps> = ({ onClose, onNext }) => {
                   <span className="file-size">{(f.file.size / 1024).toFixed(1)} KB</span>
                 </div>
 
-                {f.progress < 100 ? (
+                {!f.uploaded && !f.error ? (
                   <button className="remove-file" onClick={() => handleRemoveFile(index)}>
                     <img src="/trash.svg" alt="Cancelar upload" />
                   </button>
-                ) : (
+                ) : f.uploaded ? (
                   <img src="/check.svg" alt="Upload concluído" className="check-icon" />
-                )}
+                ) : null}
               </div>
 
               {f.progress > 0 && (
@@ -206,22 +222,25 @@ const FilesModal: React.FC<FilesModalProps> = ({ onClose, onNext }) => {
                   <span className="progress-percent-full">{f.progress}%</span>
                 </div>
               )}
+
+              {f.error && <div style={{ color: "#E64756" }}>{f.error}</div>}
             </div>
           ))}
         </div>
       )}
+
       <div className="footer-modal">
         <button className="cancel-button" onClick={onClose}>Cancelar</button>
         <button
           className="attach-button"
           onClick={handleNextClick}
-          disabled={files.length === 0 || files.some(f => f.progress < 100)}
+          disabled={disableNext}
           style={{
-            cursor: files.length === 0 || files.some(f => f.progress < 100) ? "not-allowed" : "pointer",
-            opacity: files.length === 0 || files.some(f => f.progress < 100) ? 0.5 : 1
+            cursor: disableNext ? "not-allowed" : "pointer",
+            opacity: disableNext ? 0.5 : 1
           }}
         >
-          Próximo
+          {isCreatingBase ? "Processando..." : "Próximo"}
         </button>
       </div>
     </div>

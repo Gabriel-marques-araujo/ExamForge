@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import NavBar from "../NavBar/NavBar";
 import "./QuestionPage.css";
@@ -7,7 +7,7 @@ import axios from "axios";
 interface Question {
   id: number;
   enunciado: string;
-  alternativas: string[];
+  alternativas: any[];
   rawData?: any;
   correctAnswer: string;
   explicacao: string;
@@ -29,7 +29,8 @@ const QuestionsPage: React.FC = () => {
   const topic = state?.topic || "Geral";
   const generatedQuestions = state?.generatedQuestions || [];
 
-  const questions: Question[] = React.useMemo(() => {
+  // Parse das questões recebidas
+  const parsedQuestions: Question[] = useMemo(() => {
     if (!generatedQuestions) return [];
 
     const raw = Array.isArray(generatedQuestions)
@@ -53,6 +54,7 @@ const QuestionsPage: React.FC = () => {
     }));
   }, [generatedQuestions]);
 
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: string }>({});
   const [timeLeft, setTimeLeft] = useState(timeMinutes * 60);
@@ -61,26 +63,19 @@ const QuestionsPage: React.FC = () => {
   const [showFeedback, setShowFeedback] = useState(false);
   const [results, setResults] = useState<{ [key: number]: any }>({});
 
-  if (questions.length === 0) {
-    return (
-      <div className="questions-container">
-        <NavBar />
-        <div className="no-questions">
-          <h2>Nenhuma questão foi carregada 😕</h2>
-          <button onClick={() => navigate(-1)} className="back-button">
-            Voltar
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Inicializa lista de questões
+  useEffect(() => {
+    setQuestions(parsedQuestions);
+  }, [parsedQuestions]);
 
+  const noQuestions = questions.length === 0;
+
+  // Timer do simulado
   useEffect(() => {
     if (timeLeft <= 0) {
       setIsTimeOver(true);
       return;
     }
-
     const interval = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
     return () => clearInterval(interval);
   }, [timeLeft]);
@@ -93,7 +88,7 @@ const QuestionsPage: React.FC = () => {
 
   const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
-  const feedback = results[currentQuestion.id];
+  const feedback = results[currentQuestion?.id];
 
   const handleSelect = (questionId: number, option: string) => {
     setSelectedAnswers((prev) => ({ ...prev, [questionId]: option }));
@@ -147,10 +142,62 @@ const QuestionsPage: React.FC = () => {
     }
   };
 
+  // Substituir questão (novo MCQ)
+  const newQuestion = async () => {
+    try {
+      const payload = {
+        original_mcq: questions.reduce((acc: any, q: Question, idx: number) => {
+          acc[`question ${idx + 1}`] = q.rawData;
+          return acc;
+        }, {}),
+        question_number: `question ${currentQuestionIndex + 1}`,
+        topic,
+      };
+
+      const response = await axios.post(
+        "http://localhost:8000/rag/substitute_question/",
+        payload
+      );
+
+      const newQData = response.data[`question ${currentQuestionIndex + 1}`];
+      if (!newQData) return;
+
+      const formattedQuestion: Question = {
+        id: currentQuestion.id,
+        enunciado: newQData.enunciado || newQData.question || newQData.text || "Questão substituída",
+        alternativas: newQData.alternativas || newQData.options || newQData.choices || [],
+        correctAnswer: newQData.correctAnswer || newQData.correct_answer || newQData.answer || "",
+        explicacao: newQData.explicacao || newQData.explanation || newQData.details || "",
+        rawData: newQData,
+      };
+
+      const updatedQuestions = [...questions];
+      updatedQuestions[currentQuestionIndex] = formattedQuestion;
+
+      setSelectedAnswers((prev) => {
+        const updated = { ...prev };
+        delete updated[currentQuestion.id];
+        return updated;
+      });
+
+      setResults((prev) => {
+        const updated = { ...prev };
+        delete updated[currentQuestion.id];
+        return updated;
+      });
+
+      setShowFeedback(false);
+      setShowWarning(false);
+
+      setQuestions(updatedQuestions);
+    } catch (error) {
+      console.error("Erro ao substituir questão:", error);
+    }
+  };
+
   const handleSubmit = () => {
     const correct = Object.values(results).filter((r) => r.is_correct).length;
     const totalQuestions = questions.length;
-
     const score = (correct / totalQuestions) * 10;
     const wrong = totalQuestions - correct;
 
@@ -160,7 +207,7 @@ const QuestionsPage: React.FC = () => {
         totalQuestions,
         correctAnswers: correct,
         wrongAnswers: wrong,
-        questions,
+        questions : parsedQuestions,
         userAnswers: selectedAnswers,
         timeMinutes,
         topic,
@@ -174,133 +221,111 @@ const QuestionsPage: React.FC = () => {
     <>
       <NavBar />
 
-      <div className="questions-container">
-        <div className="question-card">
-          <div className="top-info-bar">
-            <div className="topic-section">
-              <span className="label">Tópico:</span>
-              <span className="value">{topic}</span>
-            </div>
-
-            <div className="timer-section">
-              <span className="label"><img
-              src="/clock.svg"
-              alt="relógio"
-              className="clock"
-              /> Tempo Restante:</span>
-              <span className="value">{formatTime(timeLeft)}</span>
-            </div>
-          </div>
-
-          <div className="progress-bar">
-            <div className="progress" style={{ width: `${progress}%` }} />
-          </div>
-
-          <div className="question-header-with-timer">
-            <div className="question-header">
-              <div className="question-number">{currentQuestion.id}</div>
-              <p className="question-text">{currentQuestion.enunciado}</p>
-              <button className="new-question-button">
-                Nova Questão
-              </button>
-            </div>
-          </div>
-          {showWarning && (
-            <p className="warning-text">⚠️ Selecione uma alternativa para continuar.</p>
-          )}
-            
-
-          <div className="options">
-            {currentQuestion.alternativas.map((alt: any, idx: number) => {
-              const text = typeof alt === "string" ? alt : alt.option;
-              return (
-                <label
-                  key={idx}
-                  className={`option-box 
-                    ${selectedAnswers[currentQuestion.id] === text ? "selected" : ""} 
-                    ${showFeedback && feedback?.is_correct && selectedAnswers[currentQuestion.id] === text ? "correct" : ""}
-                    ${showFeedback && !feedback?.is_correct && selectedAnswers[currentQuestion.id] === text ? "wrong" : ""}
-                  `}
-                  onClick={() => handleSelect(currentQuestion.id, text)}
-                >
-                  <input
-                    type="radio"
-                    name={`question-${currentQuestion.id}`}
-                    value={text}
-                    checked={selectedAnswers[currentQuestion.id] === text}
-                    onChange={() => handleSelect(currentQuestion.id, text)}
-                    style={{ display: "none" }}
-                  />
-                  {text}
-                </label>
-              );
-            })}
-          </div>
-
-          {showFeedback && feedback && (
-            <div
-              className={`feedback ${
-                feedback.is_correct ? "feedback-correto" : "feedback-incorreto"
-              }`}
-            >
-              <p>
-                <strong>Resposta:</strong>{" "}
-                {feedback.is_correct ? "✔️ Correta" : "❌ Incorreta"}
-              </p>
-
-              <p>
-                <strong>Alternativa escolhida:</strong> {feedback.chosen_option}
-              </p>
-
-              <p>
-                <strong>Explicação:</strong>{" "}
-                {feedback.is_correct
-                  ? feedback.explanation
-                  : feedback.explanation_chosen}
-              </p>
-
-              {!feedback.is_correct && (
-                <>
-                  <p>
-                    <strong>Alternativa correta:</strong> {feedback.correct_option}
-                  </p>
-                  <p>
-                    <strong>Por que está correta:</strong>{" "}
-                    {feedback.explanation_correct}
-                  </p>
-                </>
-              )}
-            </div>
-          )}
-
-          <div className={`actions ${currentQuestionIndex === 0 ? "first-question" : ""}`}>
-            {currentQuestionIndex > 0 && (
-              <button className="back-button" onClick={handleBack}>
-                Voltar
-              </button>
-            )}
-
-            <button
-              className={showFeedback ? "next-button" : "submit-button"}
-              onClick={handleNext}
-            >
-              {showFeedback
-                ? currentQuestionIndex < questions.length - 1
-                  ? "Próxima"
-                  : "Finalizar"
-                : "Confirmar Resposta"}
+      {noQuestions && (
+        <div className="questions-container">
+          <div className="no-questions">
+            <h2>Nenhuma questão foi carregada 😕</h2>
+            <button onClick={() => navigate(-1)} className="back-button">
+              Voltar
             </button>
           </div>
         </div>
-      </div>
+      )}
+
+      {!noQuestions && (
+        <div className="questions-container">
+          <div className="question-card">
+            <div className="top-info-bar">
+              <div className="topic-section">
+                <span className="label">Tópico:</span>
+                <span className="value">{topic}</span>
+              </div>
+
+              <div className="timer-section">
+                <span className="label">
+                  <img src="/clock.svg" alt="relógio" className="clock" /> Tempo Restante:
+                </span>
+                <span className="value">{formatTime(timeLeft)}</span>
+              </div>
+            </div>
+
+            <div className="progress-bar">
+              <div className="progress" style={{ width: `${progress}%` }} />
+            </div>
+
+            <div className="question-header-with-timer">
+              <div className="question-header">
+                <div className="question-number">{currentQuestion.id}</div>
+                <p className="question-text">{currentQuestion.enunciado}</p>
+                <button className="new-question-button" onClick={newQuestion}>
+                  Substituir Questão
+                </button>
+              </div>
+            </div>
+
+            {showWarning && <p className="warning-text">⚠️ Selecione uma alternativa para continuar.</p>}
+
+            <div className="options">
+              {currentQuestion.alternativas.map((alt, idx) => {
+                const text = typeof alt === "string" ? alt : alt.option;
+                return (
+                  <label
+                    key={idx}
+                    className={`option-box 
+                      ${selectedAnswers[currentQuestion.id] === text ? "selected" : ""} 
+                      ${showFeedback && feedback?.is_correct && selectedAnswers[currentQuestion.id] === text ? "correct" : ""}
+                      ${showFeedback && !feedback?.is_correct && selectedAnswers[currentQuestion.id] === text ? "wrong" : ""}
+                    `}
+                    onClick={() => handleSelect(currentQuestion.id, text)}
+                  >
+                    <input
+                      type="radio"
+                      name={`question-${currentQuestion.id}`}
+                      value={text}
+                      checked={selectedAnswers[currentQuestion.id] === text}
+                      onChange={() => handleSelect(currentQuestion.id, text)}
+                      style={{ display: "none" }}
+                    />
+                    {text}
+                  </label>
+                );
+              })}
+            </div>
+
+            {showFeedback && feedback && (
+              <div className={`feedback ${feedback.is_correct ? "feedback-correto" : "feedback-incorreto"}`}>
+                <p><strong>Resposta:</strong> {feedback.is_correct ? "✔️ Correta" : "❌ Incorreta"}</p>
+                <p><strong>Alternativa escolhida:</strong> {feedback.chosen_option}</p>
+                <p><strong>Explicação:</strong> {feedback.is_correct ? feedback.explanation : feedback.explanation_chosen}</p>
+                {!feedback.is_correct && (
+                  <>
+                    <p><strong>Alternativa correta:</strong> {feedback.correct_option}</p>
+                    <p><strong>Por que está correta:</strong> {feedback.explanation_correct}</p>
+                  </>
+                )}
+              </div>
+            )}
+
+            <div className={`actions ${currentQuestionIndex === 0 ? "first-question" : ""}`}>
+              {currentQuestionIndex > 0 && <button className="back-button" onClick={handleBack}>Voltar</button>}
+
+              <button className={showFeedback ? "next-button" : "submit-button"} onClick={handleNext}>
+                {showFeedback
+                  ? currentQuestionIndex < questions.length - 1
+                    ? "Próxima"
+                    : "Finalizar"
+                  : "Confirmar Resposta"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isTimeOver && (
         <div className="time-over-modal">
           <div className="time-over-content">
             <h2>O tempo acabou!</h2>
-            <button className="submit-button" onClick={handleSubmit}>
-              Finalizar Simulado
-            </button>
+            <button className="submit-button" onClick={handleSubmit}>Finalizar Simulado</button>
           </div>
         </div>
       )}
