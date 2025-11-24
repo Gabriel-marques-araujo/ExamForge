@@ -131,7 +131,7 @@ const QuestionnaireModal: React.FC<QuestionnaireModalProps> = ({ onClose, onBack
             className="topic-area"
             maxLength={MAX_INSTRUCTIONS}
           />
-          <div
+          <div className="char-counter"
             style={{
               textAlign: "right",
               fontSize: "1rem",
