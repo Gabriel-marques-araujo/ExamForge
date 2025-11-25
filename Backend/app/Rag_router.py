@@ -88,31 +88,47 @@ def obter_letra_enumeração(indice):
 def generate_mcq_from_context(context: str, topic: str, questions, qnt_questoes=2, temperature: float = 0.5):
     
     prompt = f"""
-Você é especialista no(s) tema(s): {topic}.
-Gere {qnt_questoes} questões de múltipla escolha com 4 alternativas (A, B, C, D), apenas uma correta.
+    Você é um especialista altamente competente no(s) tema(s): {topic}.
+    Sua tarefa é gerar {qnt_questoes} questões de múltipla escolha de alta qualidade.
 
-Para cada alternativa:
-- Indique se é correta ou incorreta.
-- Explique detalhadamente POR QUE está correta ou incorreta.
+    🧠 Objetivo:
+    Use os documentos abaixo como base, mas NÃO se limite a eles.  
+    Use também:
+    - seu raciocínio próprio,
+    - seu conhecimento amplo e especializado sobre o tema,
+    - sua capacidade de inferência,
+    - seu bom senso pedagógico,
+    - e sua habilidade de criar questões realmente relevantes e profundas.
 
-⚠️ Responda apenas em JSON válido, no formato abaixo, sem texto adicional:
-{{
-    "question 1": {{
-        "text": "Texto da questão",
-        "options": [
-            {{"option": "Alternativa 1", "is_correct": true, "explanation": "Explicação da correta"}},
-            {{"option": "Alternativa 2", "is_correct": false, "explanation": "Explicação da incorreta"}},
-            {{"option": "Alternativa 3", "is_correct": false, "explanation": "Explicação da incorreta"}},
-            {{"option": "Alternativa 4", "is_correct": false, "explanation": "Explicação da incorreta"}}
-        ],
-        "resolution": "Resumo geral da resolução da questão"
+    O contexto serve como apoio, não como limite.  
+    A questão final deve ser melhor do que algo gerado apenas copiando trechos dos documentos.
+
+    🎯 Regras das questões:
+    - Cada questão deve ter 4 alternativas (A, B, C, D).
+    - Não precisa especificar o item, ele será especificado por métodos externos
+    - Apenas UMA alternativa deve ser correta.
+    - Para cada alternativa:
+        - Indique se ela é correta ou incorreta.
+        - Explique claramente *por que* está correta ou incorreta.
+    - Gere questões que avaliem raciocínio, interpretação e aplicação prática — não apenas memorização.
+
+    ⚠️ Responda APENAS em JSON válido, exatamente no formato abaixo, sem texto adicional fora do JSON:
+
+    {{
+        "question 1": {{
+            "text": "Texto da questão",
+            "options": [
+                {{"option": "Alternativa 1", "is_correct": true, "explanation": "Explicação da correta"}},
+                {{"option": "Alternativa 2", "is_correct": false, "explanation": "Explicação da incorreta"}},
+                {{"option": "Alternativa 3", "is_correct": false, "explanation": "Explicação da incorreta"}},
+                {{"option": "Alternativa 4", "is_correct": false, "explanation": "Explicação da incorreta"}}
+            ],
+            "resolution": "Resumo da resolução e do raciocínio da questão"
+        }}
     }}
-}}
 
-Use apenas as informações necessárias dos documentos para criar as questões e explicações.
-
-Documentos:
-{context}
+    📚 Documentos (base para inspiração e apoio, não limite, NÃO aborde temas que NÃO estejam nesses documentos):
+    {context}
 """
     response_text = get_gemini_response(prompt, temperature)
 
