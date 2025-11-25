@@ -169,6 +169,10 @@ body.dark .question-text{
   animation: fadeIn 0.3s ease-in;
 }
 
+.no-questions h2{
+  color: #e64756;
+}
+
 .timer-circle {
   display: flex;
   flex-direction: column;
