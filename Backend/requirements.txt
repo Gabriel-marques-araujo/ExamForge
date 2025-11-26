@@ -7,4 +7,5 @@ langchain-google-genai
 langchain-text-splitters
 langchain-chroma
 chromadb
+fpdf
 unstructured[local-inference]
