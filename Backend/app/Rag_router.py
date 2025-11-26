@@ -86,50 +86,49 @@ def obter_letra_enumeração(indice):
 
 # Geração de questões de múltipla escolha (RAG)
 def generate_mcq_from_context(context: str, topic: str, questions, qnt_questoes=2, temperature: float = 0.5):
-    
+
     prompt = f"""
-    Você é um especialista altamente competente no(s) tema(s): {topic}.
-    Sua tarefa é gerar {qnt_questoes} questões de múltipla escolha de alta qualidade.
+Você é um especialista altamente competente no(s) tema(s): {topic}.
+Sua tarefa é gerar {qnt_questoes} questões de múltipla escolha de alta qualidade.
 
-    🧠 Objetivo:
-    Use os documentos abaixo como base, mas NÃO se limite a eles.  
-    Use também:
-    - seu raciocínio próprio,
-    - seu conhecimento amplo e especializado sobre o tema,
-    - sua capacidade de inferência,
-    - seu bom senso pedagógico,
-    - e sua habilidade de criar questões realmente relevantes e profundas.
+📘 **Uso do contexto**
+- O contexto serve como apoio, não como limite.
+- As questões devem ser baseadas nos documentos, mas utilizando toda a sua capacidade de linguagem para gerar perguntas profundas e relevantes sobre o tópico — sem se limitar a copiar ou depender literalmente de trechos dos documentos.
+- Use os documentos apenas como referência conceitual.
+- NÃO cite, mencione ou faça alusão a “documento”, “contexto”, “texto fornecido” ou variações.
+- NÃO introduza temas que não estejam presentes nos documentos fornecidos.
 
-    O contexto serve como apoio, não como limite.  
-    A questão final deve ser melhor do que algo gerado apenas copiando trechos dos documentos.
+🎯 **Regras de elaboração das questões**
+- Cada questão deve ter exatamente 4 alternativas (A, B, C, D).
+- Apenas UMA alternativa deve ser correta.
+- NÃO crie cenários fictícios, histórias, personagens, empresas imaginárias ou situações inventadas.
+- Os enunciados devem ser diretos, técnicos e objetivos, sem contextualizações narrativas.
+- Cada alternativa deve:
+  - ser autossuficiente e específica;
+  - indicar claramente se é correta ou incorreta;
+  - conter explicação objetiva e técnica do motivo.
+- As questões devem avaliar raciocínio, interpretação e aplicação prática — não apenas memorização.
 
-    🎯 Regras das questões:
-    - Cada questão deve ter 4 alternativas (A, B, C, D).
-    - Não precisa especificar o item, ele será especificado por métodos externos
-    - Apenas UMA alternativa deve ser correta.
-    - Para cada alternativa:
-        - Indique se ela é correta ou incorreta.
-        - Explique claramente *por que* está correta ou incorreta.
-    - Gere questões que avaliem raciocínio, interpretação e aplicação prática — não apenas memorização.
+⚠️ **Formato obrigatório**
+Responda APENAS com um JSON válido, sem qualquer texto fora do JSON, seguindo exatamente esta estrutura:
 
-    ⚠️ Responda APENAS em JSON válido, exatamente no formato abaixo, sem texto adicional fora do JSON:
-
-    {{
-        "question 1": {{
-            "text": "Texto da questão",
-            "options": [
-                {{"option": "Alternativa 1", "is_correct": true, "explanation": "Explicação da correta"}},
-                {{"option": "Alternativa 2", "is_correct": false, "explanation": "Explicação da incorreta"}},
-                {{"option": "Alternativa 3", "is_correct": false, "explanation": "Explicação da incorreta"}},
-                {{"option": "Alternativa 4", "is_correct": false, "explanation": "Explicação da incorreta"}}
-            ],
-            "resolution": "Resumo da resolução e do raciocínio da questão"
-        }}
+{{
+    "question 1": {{
+        "text": "Texto da questão",
+        "options": [
+            {{"option": "Alternativa 1", "is_correct": true, "explanation": "Explicação da correta"}},
+            {{"option": "Alternativa 2", "is_correct": false, "explanation": "Explicação da incorreta"}},
+            {{"option": "Alternativa 3", "is_correct": false, "explanation": "Explicação da incorreta"}},
+            {{"option": "Alternativa 4", "is_correct": false, "explanation": "Explicação da incorreta"}}
+        ],
+        "resolution": "Resumo da resolução e raciocínio da questão"
     }}
+}}
 
-    📚 Documentos (base para inspiração e apoio, não limite, NÃO aborde temas que NÃO estejam nesses documentos):
-    {context}
+📚 **Documentos de apoio:**
+{context}
 """
+
     response_text = get_gemini_response(prompt, temperature)
 
     try:
@@ -140,7 +139,6 @@ def generate_mcq_from_context(context: str, topic: str, questions, qnt_questoes=
 
         CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
         QUESTIONS_PATH = os.path.join(CURRENT_DIR, "questions.json")
-
 
         with open(QUESTIONS_PATH, "w", encoding="utf-8") as arquivo:
             json.dump(mcq, arquivo, ensure_ascii=False, indent=4)
