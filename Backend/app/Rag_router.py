@@ -9,6 +9,8 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import google.generativeai as genai
 import json
 from fpdf import FPDF
+from fastapi.responses import FileResponse
+
 
 load_dotenv()
 
@@ -219,7 +221,7 @@ def create_PDF(exame):
     pdf.set_auto_page_break(auto=True, margin=15)
 
     CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-    pdf_path = os.path.join(CURRENT_DIR, "prova_ExamForge.pdf")
+    pdf_path = os.path.join(CURRENT_DIR, "j_ExamForge.pdf")
 
     for i, question_key in enumerate(exame.keys(), 1):
         question = exame[question_key]
@@ -349,6 +351,8 @@ async def generate_PDF():
 
         result = create_PDF(exame)
 
+        return FileResponse(result,media_type='application/pdf', filename="ExamForge.pdf")
+
         return {
             "status": "success",
             "message": "PDF gerado com sucesso",
@@ -360,6 +364,7 @@ async def generate_PDF():
             "status": "error",
             "message": f"Erro ao gerar PDF: {str(e)}"
         }
+
 
 @router.get("/status/")
 def status():
