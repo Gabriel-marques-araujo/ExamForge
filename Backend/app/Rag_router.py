@@ -221,7 +221,7 @@ def create_PDF(exame):
     pdf.set_auto_page_break(auto=True, margin=15)
 
     CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-    pdf_path = os.path.join(CURRENT_DIR, "j_ExamForge.pdf")
+    pdf_path = os.path.join(CURRENT_DIR, "prova_ExamForge.pdf")
 
     for i, question_key in enumerate(exame.keys(), 1):
         question = exame[question_key]
