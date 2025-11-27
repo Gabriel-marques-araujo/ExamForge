@@ -62,6 +62,7 @@ const QuestionsPage: React.FC = () => {
   const [showWarning, setShowWarning] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [results, setResults] = useState<{ [key: number]: any }>({});
+  const [isLoadingNewQuestion, setIsLoadingNewQuestion] = useState(false);
 
   // Inicializa lista de questões
   useEffect(() => {
@@ -144,56 +145,60 @@ const QuestionsPage: React.FC = () => {
 
   // Substituir questão (novo MCQ)
   const newQuestion = async () => {
-    try {
-      const payload = {
-        original_mcq: questions.reduce((acc: any, q: Question, idx: number) => {
-          acc[`question ${idx + 1}`] = q.rawData;
-          return acc;
-        }, {}),
-        question_number: `question ${currentQuestionIndex + 1}`,
-        topic,
-      };
+  try {
+    setIsLoadingNewQuestion(true);   // ⬅️ Ativa tela de loading
 
-      const response = await axios.post(
-        "http://localhost:8000/rag/substitute_question/",
-        payload
-      );
+    const payload = {
+      original_mcq: questions.reduce((acc: any, q: Question, idx: number) => {
+        acc[`question ${idx + 1}`] = q.rawData;
+        return acc;
+      }, {}),
+      question_number: `question ${currentQuestionIndex + 1}`,
+      topic,
+    };
 
-      const newQData = response.data[`question ${currentQuestionIndex + 1}`];
-      if (!newQData) return;
+    const response = await axios.post(
+      "http://localhost:8000/rag/substitute_question/",
+      payload
+    );
 
-      const formattedQuestion: Question = {
-        id: currentQuestion.id,
-        enunciado: newQData.enunciado || newQData.question || newQData.text || "Questão substituída",
-        alternativas: newQData.alternativas || newQData.options || newQData.choices || [],
-        correctAnswer: newQData.correctAnswer || newQData.correct_answer || newQData.answer || "",
-        explicacao: newQData.explicacao || newQData.explanation || newQData.details || "",
-        rawData: newQData,
-      };
+    const newQData = response.data[`question ${currentQuestionIndex + 1}`];
+    if (!newQData) return;
 
-      const updatedQuestions = [...questions];
-      updatedQuestions[currentQuestionIndex] = formattedQuestion;
+    const formattedQuestion: Question = {
+      id: currentQuestion.id,
+      enunciado: newQData.enunciado || newQData.question || newQData.text || "Questão substituída",
+      alternativas: newQData.alternativas || newQData.options || newQData.choices || [],
+      correctAnswer: newQData.correctAnswer || newQData.correct_answer || newQData.answer || "",
+      explicacao: newQData.explicacao || newQData.explanation || newQData.details || "",
+      rawData: newQData,
+    };
 
-      setSelectedAnswers((prev) => {
-        const updated = { ...prev };
-        delete updated[currentQuestion.id];
-        return updated;
-      });
+    const updatedQuestions = [...questions];
+    updatedQuestions[currentQuestionIndex] = formattedQuestion;
 
-      setResults((prev) => {
-        const updated = { ...prev };
-        delete updated[currentQuestion.id];
-        return updated;
-      });
+    setSelectedAnswers((prev) => {
+      const updated = { ...prev };
+      delete updated[currentQuestion.id];
+      return updated;
+    });
 
-      setShowFeedback(false);
-      setShowWarning(false);
+    setResults((prev) => {
+      const updated = { ...prev };
+      delete updated[currentQuestion.id];
+      return updated;
+    });
 
-      setQuestions(updatedQuestions);
-    } catch (error) {
-      console.error("Erro ao substituir questão:", error);
-    }
-  };
+    setShowFeedback(false);
+    setShowWarning(false);
+
+    setQuestions(updatedQuestions);
+  } catch (error) {
+    console.error("Erro ao substituir questão:", error);
+  } finally {
+    setIsLoadingNewQuestion(false);  // ⬅️ Desativa loading
+  }
+};
 
   const handleSubmit = () => {
     const correct = Object.values(results).filter((r) => r.is_correct).length;
@@ -220,7 +225,6 @@ const QuestionsPage: React.FC = () => {
   return (
     <>
       <NavBar />
-
       {noQuestions && (
         <div className="questions-container">
           <div className="no-questions">
@@ -231,7 +235,14 @@ const QuestionsPage: React.FC = () => {
           </div>
         </div>
       )}
-
+      {isLoadingNewQuestion && (
+        <div className="loading-overlay">
+          <div className="loading-box">
+            <div className="spinner"></div>
+            <p>Gerando nova questão...</p>
+          </div>
+        </div>
+      )}
       {!noQuestions && (
         <div className="questions-container">
           <div className="question-card">
