@@ -102,6 +102,7 @@ Sua tarefa é gerar {qnt_questoes} questões de múltipla escolha de alta qualid
 
 🎯 **Regras de elaboração das questões**
 - Cada questão deve ter exatamente 4 alternativas (A, B, C, D).
+- As questões serão enumeradas por meios externos, então não é necessário especificar o item.
 - Apenas UMA alternativa deve ser correta.
 - NÃO crie cenários fictícios, histórias, personagens, empresas imaginárias ou situações inventadas.
 - Os enunciados devem ser diretos, técnicos e objetivos, sem contextualizações narrativas.
@@ -254,6 +255,40 @@ def create_PDF(exame):
     return pdf_path
 
 
+# Feedback final do simulado
+def generate_feedback(dict_responses: dict, temperature: float = 0.5):
+
+    prompt = f"""Você é um avaliador educacional IA. Analise o desempenho do aluno em um exame e forneça feedback construtivo sobre seus pontos fortes e áreas que precisam de melhoria.
+
+**Dados do Exame:**
+{dict_responses}
+
+**Instruções:**
+- Analise as respostas do aluno comparando com as respostas corretas
+- Identifique os **tópicos/conceitos que o aluno demonstra domínio** (onde acertou)
+- Identifique os **tópicos/conceitos que precisam de melhoria** (onde errou)
+- Seja claro e direto, usando linguagem natural e acessível
+- Não entre em detalhes técnicos profundos sobre cada erro
+- Foque nos **conceitos principais** que precisam de atenção
+- Mantenha o feedback positivo e encorajador
+
+**Formato da Resposta:**
+Forneça um parágrafo único em português que:
+1. Comece reconhecendo o esforço do aluno
+2. Liste os tópicos de domínio
+3. Liste os tópicos que precisam de estudo adicional
+4. Termine com uma mensagem motivacional
+
+**Exemplo de Resposta:**
+"Parabéns pela sua participação no exame! Você demonstrou bom entendimento em [tópicos de domínio]. No entanto, observei que alguns conceitos precisam de mais atenção, especialmente [tópicos para melhorar]. Continue estudando esses pontos e você certamente evoluirá no seu aprendizado!"
+
+**Nota:** Adapte a resposta com base no desempenho real do aluno nos dados fornecidos.
+"""
+
+    response_text = get_gemini_response(prompt, temperature)
+    return response_text
+
+
 # Modelos de requisição
 class MCQRequest(BaseModel):
     topic: str
@@ -267,7 +302,9 @@ class SubstituteQuestionRequest(BaseModel):
     original_mcq: dict
     question_number: str
     topic: str
-    
+
+class CheckResult(BaseModel):
+    chosen_options: list
 
 # Endpoints
 @router.post("/generate_mcq/")
@@ -326,6 +363,7 @@ def check_answer(data: CheckAnswerRequest):
             "explanation_correct": explanation_correct
         }
 
+
 @router.post("/substitute_question/")
 def substitute_question_endpoint(data: SubstituteQuestionRequest):
     updated = substitute_question(
@@ -364,6 +402,50 @@ async def generate_PDF():
             "status": "error",
             "message": f"Erro ao gerar PDF: {str(e)}"
         }
+
+
+@router.post("/final_evaluation")
+def final_evaluation(data: CheckResult):
+    
+    CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+    QUESTIONS_PATH = os.path.join(CURRENT_DIR, "questions.json")
+
+
+    if not os.path.exists(QUESTIONS_PATH):
+        return {"status": "error", "message": "Arquivo questions.json não encontrado"}
+
+    with open(QUESTIONS_PATH, "r", encoding="utf-8") as arquivo:
+        exame = json.load(arquivo)
+
+    mapeamento = {'a': 0, 'b': 1, 'c': 2, 'd': 3}
+    chosen_options = [mapeamento[item] for item in data.chosen_options]
+    dict_questions = {}
+
+    for i, question_key in enumerate(exame.keys(), 1):
+        question = exame[question_key]
+        chosen_option = chosen_options[i-1]
+        text_chosen_option = ""
+        text_correct_option = ""
+
+        options = question['options']
+        
+        for j, option in enumerate(options):
+            if (option['is_correct']):
+                text_correct_option = option["option"]
+            if (j == chosen_option):
+                text_chosen_option = option["option"]
+
+        
+        
+        dict_questions[f"question {i}"] = {
+            "text": question["text"],
+            "correct_option": text_correct_option,
+            "chosen_option": text_chosen_option
+        }
+    
+    feedback = generate_feedback(dict_questions)
+    return feedback
+
 
 
 @router.get("/status/")
