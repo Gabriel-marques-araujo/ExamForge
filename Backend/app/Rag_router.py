@@ -1,12 +1,12 @@
 import os
 import json
+import re
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from langchain_chroma import Chroma
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-import google.generativeai as genai
+from langchain_google_genai import GoogleGenerativeAIEmbeddings,ChatGoogleGenerativeAI
 import json
 from fpdf import FPDF
 from fastapi.responses import FileResponse
@@ -25,8 +25,12 @@ if not GEMINI_KEY:
     raise ValueError("GOOGLE_GEMINI_KEY não encontrada no arquivo .env")
 
 os.environ["GOOGLE_API_KEY"] = GEMINI_KEY
-genai.configure(api_key=GEMINI_KEY)
-genai_model = genai.GenerativeModel("gemini-2.5-flash")
+
+chat_model = ChatGoogleGenerativeAI(
+    model = "gemini-2.5-flash",
+    temperature = 0.5,
+    api_key=GEMINI_KEY
+)
 
 # Configuração de embeddings e banco vetorial
 embedding_function = GoogleGenerativeAIEmbeddings(
@@ -53,13 +57,26 @@ def format_docs(docs):
     ])
 
 def get_gemini_response(prompt: str, temperature: float = 0.5):
-    """Gera resposta textual com o modelo Gemini."""
+    """Gera resposta textual com o modelo Gemini via LangChain ChatGoogleGenerativeAI."""
     try:
-        response = genai_model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(temperature=temperature)
-        )
-        return response.text.strip()
+        if not isinstance(prompt, str):
+            prompt = str(prompt)
+
+        
+        prompt = prompt[:4000]
+
+       
+        messages = [
+            ("system", "Você é um assistente técnico especializado em gerar questões de múltipla escolha."),
+            ("user", prompt)
+        ]
+
+        
+        ai_msg = chat_model.invoke(messages, temperature=temperature)
+
+        # Retorna apenas o conteúdo da resposta
+        return ai_msg.content.strip()
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao gerar resposta: {str(e)}")
 
@@ -118,10 +135,10 @@ Responda APENAS com um JSON válido, sem qualquer texto fora do JSON, seguindo e
     "question 1": {{
         "text": "Texto da questão",
         "options": [
-            {{"option": "Alternativa 1", "is_correct": true, "explanation": "Explicação da correta"}},
-            {{"option": "Alternativa 2", "is_correct": false, "explanation": "Explicação da incorreta"}},
-            {{"option": "Alternativa 3", "is_correct": false, "explanation": "Explicação da incorreta"}},
-            {{"option": "Alternativa 4", "is_correct": false, "explanation": "Explicação da incorreta"}}
+            {{"option": "Alternativa 1", "is_correct": true/false, "explanation"}},
+            {{"option": "Alternativa 2", "is_correct": true/false, "explanation"}},
+            {{"option": "Alternativa 3", "is_correct": true/false, "explanation"}},
+            {{"option": "Alternativa 4", "is_correct": true/false, "explanation"}}
         ],
         "resolution": "Resumo da resolução e raciocínio da questão"
     }}
@@ -167,49 +184,64 @@ def substitute_question(original_mcq: dict, question_number: str, topic: str, te
 
     prompt = f"""
 Você é especialista no tema: {topic}.
+Gere UMA nova questão de múltipla escolha diferente das já existentes.
 
-Gere uma NOVA questão de múltipla escolha para substituir a questão existente.
-⚠️ A nova questão deve ser diferente das demais questões já geradas.
+⚠️ RESPONDA APENAS COM O JSON, SEM TEXTO EXTRA, SEM MARKDOWN.
 
-Questão atual que deve ser substituída:
-{json.dumps(original_mcq.get(question_number, {}), ensure_ascii=False)}
-
-Liste também as outras questões já existentes para evitar repetição:
-{json.dumps(original_mcq, ensure_ascii=False)}
-
-Formato OBRIGATÓRIO:
+Formato:
 {{
-    "{question_number}": {{
-        "text": "...",
-        "options": [
-            {{"option": "...", "is_correct": true/false, "explanation": "..."}},
-            {{"option": "...", "is_correct": true/false, "explanation": "..."}},
-            {{"option": "...", "is_correct": true/false, "explanation": "..."}},
-            {{"option": "...", "is_correct": true/false, "explanation": "..."}}
-        ],
-        "resolution": "..."
-    }}
+  "text": "...",
+  "options": [
+    {{"option": "...", "is_correct": true, "explanation": "..."}},
+    {{"option": "...", "is_correct": false, "explanation": "..."}},
+    {{"option": "...", "is_correct": false, "explanation": "..."}},
+    {{"option": "...", "is_correct": false, "explanation": "..."}}
+  ],
+  "resolution": "..."
 }}
 
-Documentos:
-{context}
+Outras questões (evite repetir):
+{json.dumps(original_mcq, ensure_ascii=False)}
+
+Documentos: {context[:2000]}
 """
 
     response_text = get_gemini_response(prompt, temperature)
 
     try:
+       
+        response_text = re.sub(r'^.*?```json\s*', '', response_text, flags=re.DOTALL)
+        response_text = re.sub(r'```.*$', '', response_text, flags=re.DOTALL)
+        response_text = response_text.strip()
+        
+      
         start = response_text.find("{")
         end = response_text.rfind("}") + 1
         json_text = response_text[start:end]
-        new_question = json.loads(json_text)
-    except:
+        
+        parsed = json.loads(json_text)
+        
+        # Monta no formato correto
+        new_question = {question_number: parsed} if "text" in parsed else parsed
+        
+    except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Erro ao decodificar JSON da nova questão.\nResposta bruta:\n{response_text}"
+            detail=f"Erro JSON: {str(e)[:200]}"
         )
     
-    # substitui somente a questão escolhida
+    # Substitui a questão
     original_mcq[question_number] = new_question[question_number]
+
+
+    try:
+        CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+        QUESTIONS_PATH = os.path.join(CURRENT_DIR, "questions.json")
+        
+        with open(QUESTIONS_PATH, "w", encoding="utf-8") as f:
+            json.dump(original_mcq, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao salvar: {str(e)}")
 
     return original_mcq
 
@@ -260,7 +292,7 @@ class MCQRequest(BaseModel):
     qnt_questoes: int
 
 class CheckAnswerRequest(BaseModel):
-    question_data: dict  # JSON da questão gerada pelo /generate_mcq/
+    question_data: dict  
     chosen_option: str
 
 class SubstituteQuestionRequest(BaseModel):
@@ -328,13 +360,24 @@ def check_answer(data: CheckAnswerRequest):
 
 @router.post("/substitute_question/")
 def substitute_question_endpoint(data: SubstituteQuestionRequest):
-    updated = substitute_question(
-        original_mcq=data.original_mcq,
-        question_number=data.question_number,
-        topic=data.topic,
-
-    )
-    return updated
+    """Substitui uma questão específica."""
+    try:
+        if data.question_number not in data.original_mcq:
+            raise HTTPException(status_code=404, detail="Questão não encontrada")
+        
+        updated = substitute_question(
+            original_mcq=data.original_mcq,
+            question_number=data.question_number,
+            topic=data.topic
+        )
+        
+      
+        return updated
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/generate_PDF/")
 async def generate_PDF():
