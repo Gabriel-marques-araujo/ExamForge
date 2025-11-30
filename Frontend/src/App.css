@@ -78,6 +78,11 @@ body.dark .title{
   color: black;
 }
 
+body.dark .subtitle {
+  color: rgba(255, 255, 255, 0.87);
+}
+
+
 .image-area {
   padding: 6rem 2rem 4rem 6rem;
   opacity: 0;
