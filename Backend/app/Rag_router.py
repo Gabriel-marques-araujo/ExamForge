@@ -87,6 +87,7 @@ def obter_letra_enumeração(indice):
     return vogais[indice % len(vogais)]
 
 # Geração de questões de múltipla escolha (RAG)
+dict_questions = {}
 def generate_mcq_from_context(context: str, topic: str, questions, qnt_questoes=2, temperature: float = 0.5):
 
     prompt = f"""
@@ -146,6 +147,30 @@ Responda APENAS com um JSON válido, sem qualquer texto fora do JSON, seguindo e
         with open(QUESTIONS_PATH, "w", encoding="utf-8") as arquivo:
             json.dump(mcq, arquivo, ensure_ascii=False, indent=4)
 
+        if not os.path.exists(QUESTIONS_PATH):
+            return {"status": "error", "message": "Arquivo questions.json não encontrado"}
+
+        with open(QUESTIONS_PATH, "r", encoding="utf-8") as arquivo:
+            exame = json.load(arquivo)
+
+
+        for i, question_key in enumerate(exame.keys(), 1):
+            question = exame[question_key]
+            text_chosen_option = ""
+            text_correct_option = ""
+
+            options = question['options']
+            
+            for j, option in enumerate(options):
+                if (option['is_correct']):
+                    text_correct_option = option["option"]
+
+            dict_questions[f"question {i}"] = {
+                "text": question["text"],
+                "correct_option": text_correct_option,
+                "chosen_option": text_chosen_option
+        }
+        
         return mcq
 
     except Exception as e:
@@ -254,7 +279,6 @@ def create_PDF(exame):
     pdf.output(pdf_path)
     return pdf_path
 
-
 # Feedback final do simulado
 def generate_feedback(dict_responses: dict, temperature: float = 0.5):
 
@@ -303,8 +327,6 @@ class SubstituteQuestionRequest(BaseModel):
     question_number: str
     topic: str
 
-class CheckResult(BaseModel):
-    chosen_options: list
 
 # Endpoints
 @router.post("/generate_mcq/")
@@ -323,6 +345,8 @@ def generate_mcq(data: MCQRequest):
     
     # Adiciona fontes ao JSON retornado
     mcq["sources"] = [doc.metadata.get("source", "Desconhecida") for doc in relevant_docs]
+
+    print(dict_questions)
     return mcq
 
 @router.post("/check_answer/")
@@ -346,6 +370,10 @@ def check_answer(data: CheckAnswerRequest):
     
     is_correct = chosen.lower() == (correct_option or "").lower()
 
+
+    key_question = list(question_data.keys())[0]
+    dict_questions[key_question]["chosen_option"] = chosen
+    
     if is_correct:
         return {
             "is_correct": True,
@@ -362,7 +390,6 @@ def check_answer(data: CheckAnswerRequest):
             "correct_option": correct_option,
             "explanation_correct": explanation_correct
         }
-
 
 @router.post("/substitute_question/")
 def substitute_question_endpoint(data: SubstituteQuestionRequest):
@@ -403,50 +430,12 @@ async def generate_PDF():
             "message": f"Erro ao gerar PDF: {str(e)}"
         }
 
-
 @router.post("/final_evaluation")
-def final_evaluation(data: CheckResult):
+def final_evaluation():
     
-    CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-    QUESTIONS_PATH = os.path.join(CURRENT_DIR, "questions.json")
-
-
-    if not os.path.exists(QUESTIONS_PATH):
-        return {"status": "error", "message": "Arquivo questions.json não encontrado"}
-
-    with open(QUESTIONS_PATH, "r", encoding="utf-8") as arquivo:
-        exame = json.load(arquivo)
-
-    mapeamento = {'a': 0, 'b': 1, 'c': 2, 'd': 3}
-    chosen_options = [mapeamento[item] for item in data.chosen_options]
-    dict_questions = {}
-
-    for i, question_key in enumerate(exame.keys(), 1):
-        question = exame[question_key]
-        chosen_option = chosen_options[i-1]
-        text_chosen_option = ""
-        text_correct_option = ""
-
-        options = question['options']
-        
-        for j, option in enumerate(options):
-            if (option['is_correct']):
-                text_correct_option = option["option"]
-            if (j == chosen_option):
-                text_chosen_option = option["option"]
-
-        
-        
-        dict_questions[f"question {i}"] = {
-            "text": question["text"],
-            "correct_option": text_correct_option,
-            "chosen_option": text_chosen_option
-        }
-    
+    #print(dict_questions)
     feedback = generate_feedback(dict_questions)
     return feedback
-
-
 
 @router.get("/status/")
 def status():
