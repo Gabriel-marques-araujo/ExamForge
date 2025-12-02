@@ -221,127 +221,157 @@ const QuestionsPage: React.FC = () => {
       },
     });
   };
-
   return (
-    <>
-      <NavBar />
-      {noQuestions && (
-        <div className="questions-container">
-          <div className="no-questions">
-            <h2>Nenhuma questão foi carregada 😕</h2>
-            <button onClick={() => navigate(-1)} className="back-button">
-              Voltar
-            </button>
-          </div>
+  <>
+    <NavBar />
+    {noQuestions && (
+      <div className="questions-container">
+        <div className="no-questions">
+          <h2>Nenhuma questão foi carregada 😕</h2>
+          <button onClick={() => navigate(-1)} className="back-button">
+            Voltar
+          </button>
         </div>
-      )}
-      {isLoadingNewQuestion && (
-        <div className="loading-overlay">
-          <div className="loading-box">
-            <div className="spinner"></div>
-            <p>Gerando nova questão...</p>
-          </div>
-        </div>
-      )}
-      {!noQuestions && (
-        <div className="questions-container">
-          <div className="question-card">
-            <div className="top-info-bar">
-              <div className="topic-section">
-                <span className="label">Tópico:</span>
-                <span className="value">{topic}</span>
-              </div>
+      </div>
+    )}
 
-              <div className="timer-section">
-                <span className="label">
-                  <img src="/clock.svg" alt="relógio" className="clock" /> Tempo Restante:
-                </span>
-                <span className="value">{formatTime(timeLeft)}</span>
-              </div>
+    {!noQuestions && (
+      <div className="questions-container">
+        <div className="question-card">
+          <div className="top-info-bar">
+            <div className="topic-section">
+              <span className="label">Tópico:</span>
+              <span className="value">{topic}</span>
             </div>
 
-            <div className="progress-bar">
-              <div className="progress" style={{ width: `${progress}%` }} />
+            <div className="timer-section">
+              <span className="label">
+                <img src="/clock.svg" alt="relógio" className="clock" /> Tempo Restante:
+              </span>
+              <span className="value">{formatTime(timeLeft)}</span>
             </div>
+          </div>
 
-            <div className="question-header-with-timer">
+          <div className="progress-bar">
+            <div className="progress" style={{ width: `${progress}%` }} />
+          </div>
+          <div className="question-content-wrapper">
+            {isLoadingNewQuestion && (
+              <div className="question-loading-overlay">
+                <div className="spinner"></div>
+                <p>Gerando nova questão...</p>
+              </div>
+            )}
+            <div className={`question-content ${isLoadingNewQuestion ? "question-blur-area" : ""}`}>
               <div className="question-header">
                 <div className="question-number">{currentQuestion.id}</div>
                 <p className="question-text">{currentQuestion.enunciado}</p>
-                <button className="new-question-button" onClick={newQuestion}>
-                  Substituir Questão
-                </button>
               </div>
-            </div>
 
-            {showWarning && <p className="warning-text">⚠️ Selecione uma alternativa para continuar.</p>}
+              {showWarning && (
+                <p className="warning-text">⚠️ Selecione uma alternativa para continuar.</p>
+              )}
 
-            <div className="options">
-              {currentQuestion.alternativas.map((alt, idx) => {
-                const text = typeof alt === "string" ? alt : alt.option;
-                return (
-                  <label
-                    key={idx}
-                    className={`option-box 
-                      ${selectedAnswers[currentQuestion.id] === text ? "selected" : ""} 
-                      ${showFeedback && feedback?.is_correct && selectedAnswers[currentQuestion.id] === text ? "correct" : ""}
-                      ${showFeedback && !feedback?.is_correct && selectedAnswers[currentQuestion.id] === text ? "wrong" : ""}
-                    `}
-                    onClick={() => handleSelect(currentQuestion.id, text)}
-                  >
-                    <input
-                      type="radio"
-                      name={`question-${currentQuestion.id}`}
-                      value={text}
-                      checked={selectedAnswers[currentQuestion.id] === text}
-                      onChange={() => handleSelect(currentQuestion.id, text)}
-                      style={{ display: "none" }}
-                    />
-                    {text}
-                  </label>
-                );
-              })}
-            </div>
+              <div className="options">
+                {currentQuestion.alternativas.map((alt, idx) => {
+                  const text = typeof alt === "string" ? alt : alt.option;
+                  const selected = selectedAnswers[currentQuestion.id] === text;
+                  const isDisabled = isLoadingNewQuestion || showFeedback;
 
-            {showFeedback && feedback && (
-              <div className={`feedback ${feedback.is_correct ? "feedback-correto" : "feedback-incorreto"}`}>
-                <p><strong>Resposta:</strong> {feedback.is_correct ? "✔️ Correta" : "❌ Incorreta"}</p>
-                <p><strong>Alternativa escolhida:</strong> {feedback.chosen_option}</p>
-                <p><strong>Explicação:</strong> {feedback.is_correct ? feedback.explanation : feedback.explanation_chosen}</p>
-                {!feedback.is_correct && (
-                  <>
-                    <p><strong>Alternativa correta:</strong> {feedback.correct_option}</p>
-                    <p><strong>Por que está correta:</strong> {feedback.explanation_correct}</p>
-                  </>
-                )}
+                  return (
+                    <label
+                      key={idx}
+                      className={`option-box
+                        ${selected ? "selected" : ""}
+                        ${showFeedback && selected && feedback?.is_correct ? "correct" : ""}
+                        ${showFeedback && selected && !feedback?.is_correct ? "wrong" : ""}
+                        ${isDisabled ? "disabled-option" : ""}
+                      `}
+                      onClick={() =>
+                        !isDisabled && handleSelect(currentQuestion.id, text) 
+                      }
+                    >
+                      <input
+                        type="radio"
+                        name={`question-${currentQuestion.id}`}
+                        value={text}
+                        checked={selected}
+                        onChange={() => handleSelect(currentQuestion.id, text)}
+                        disabled={isLoadingNewQuestion}
+                        style={{ display: "none" }}
+                      />
+                      {text}
+                    </label>
+                  );
+                })}
               </div>
+              
+          <div className={`actions ${currentQuestionIndex === 0 ? "first-question" : ""}`}>
+            {currentQuestionIndex > 0 && (
+              <button
+                className="back-button"
+                onClick={handleBack}
+                disabled={isLoadingNewQuestion}
+              >
+                Voltar
+              </button>
             )}
 
-            <div className={`actions ${currentQuestionIndex === 0 ? "first-question" : ""}`}>
-              {currentQuestionIndex > 0 && <button className="back-button" onClick={handleBack}>Voltar</button>}
+            <button
+              className="new-question-button" 
+              onClick={newQuestion}
+              disabled={isLoadingNewQuestion}
+            >
+              Substituir Questão
+            </button>
 
-              <button className={showFeedback ? "next-button" : "submit-button"} onClick={handleNext}>
-                {showFeedback
-                  ? currentQuestionIndex < questions.length - 1
-                    ? "Próxima"
-                    : "Finalizar"
-                  : "Confirmar Resposta"}
-              </button>
+            <button
+              className={showFeedback ? "next-button" : "submit-button"}
+              onClick={handleNext}
+              disabled={isLoadingNewQuestion}
+            >
+              {showFeedback
+                ? currentQuestionIndex < questions.length - 1
+                  ? "Próxima"
+                  : "Finalizar"
+                : "Confirmar Resposta"}
+            </button>
+          </div>
+    {!isLoadingNewQuestion && showFeedback && feedback && (
+                <div
+                  className={`feedback ${
+                    feedback.is_correct ? "feedback-correto" : "feedback-incorreto"
+                  }`}
+                >
+                  <p><strong>Resposta:</strong> {feedback.is_correct ? "✔️ Correta" : "❌ Incorreta"}</p>
+                  <p><strong>Alternativa escolhida:</strong> {feedback.chosen_option}</p>
+                  <p><strong>Explicação:</strong> {feedback.is_correct ? feedback.explanation : feedback.explanation_chosen}</p>
+
+                  {!feedback.is_correct && (
+                    <>
+                      <p><strong>Alternativa correta:</strong> {feedback.correct_option}</p>
+                      <p><strong>Por que está correta:</strong> {feedback.explanation_correct}</p>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
-      {isTimeOver && (
-        <div className="time-over-modal">
-          <div className="time-over-content">
-            <h2>O tempo acabou!</h2>
-            <button className="submit-button" onClick={handleSubmit}>Finalizar Simulado</button>
-          </div>
+    {isTimeOver && (
+      <div className="time-over-modal">
+        <div className="time-over-content">
+          <h2>O tempo acabou!</h2>
+          <button className="submit-button" onClick={handleSubmit}>
+            Finalizar Simulado
+          </button>
         </div>
-      )}
-    </>
-  );
+      </div>
+    )}
+  </>
+);
 };
-
 export default QuestionsPage;
