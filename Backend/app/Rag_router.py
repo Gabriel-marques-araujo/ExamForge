@@ -105,6 +105,7 @@ Sua tarefa é gerar {qnt_questoes} questões de múltipla escolha de alta qualid
 - Cada questão deve ter exatamente 4 alternativas (A, B, C, D).
 - As questões serão enumeradas por meios externos, então não é necessário especificar o item.
 - Apenas UMA alternativa deve ser correta.
+- Varia a posição da resposta correta, de forma a não repetir uma mesma alternativa muitas vezes. Ex: A primeira é a), a segunda c) a terceira d) etc...
 - NÃO crie cenários fictícios, histórias, personagens, empresas imaginárias ou situações inventadas.
 - Os enunciados devem ser diretos, técnicos e objetivos, sem contextualizações narrativas.
 - Cada alternativa deve:
@@ -192,35 +193,61 @@ def substitute_question(original_mcq: dict, question_number: str, topic: str, te
     context = format_docs(relevant_docs)
 
     prompt = f"""
-Você é especialista no tema: {topic}.
+Você é um especialista altamente competente no tema: {topic}.
 
-Gere uma NOVA questão de múltipla escolha para substituir a questão existente.
-⚠️ A nova questão deve ser diferente das demais questões já geradas.
+Sua tarefa é gerar uma NOVA questão de múltipla escolha de alta qualidade para substituir a questão existente, mantendo o mesmo padrão de profundidade e qualidade das demais questões.
 
-Questão atual que deve ser substituída:
-{json.dumps(original_mcq.get(question_number, {}), ensure_ascii=False)}
+⚠️ **REGRA CRÍTICA DE DIFERENCIAÇÃO**
+- A nova questão deve ser DIFERENTE e ORIGINAL em relação a todas as questões já existentes.
+- NÃO repita o mesmo tema, enfoque, estrutura ou abordagem das questões listadas abaixo.
+- Crie uma questão sobre um aspecto diferente do tópico ou com um ângulo distinto de análise.
 
-Liste também as outras questões já existentes para evitar repetição:
-{json.dumps(original_mcq, ensure_ascii=False)}
+📘 **Uso do contexto**
+- O contexto serve como apoio, não como limite.
+- A questão deve ser baseada nos documentos, mas utilizando toda a sua capacidade de linguagem para gerar uma pergunta profunda e relevante sobre o tópico — sem se limitar a copiar ou depender literalmente de trechos dos documentos.
+- Use os documentos apenas como referência conceitual.
+- NÃO cite, mencione ou faça alusão a “documento”, “contexto”, “texto fornecido” ou variações.
+- NÃO introduza temas que não estejam presentes nos documentos fornecidos.
 
-Formato OBRIGATÓRIO:
+🎯 **Regras de elaboração da questão**
+- A questão deve ter exatamente 4 alternativas (A, B, C, D).
+- Apenas UMA alternativa deve ser correta.
+- Varia a posição da resposta correta em relação às outras questões (evite padrões previsíveis).
+- NÃO crie cenários fictícios, histórias, personagens, empresas imaginárias ou situações inventadas.
+- O enunciado deve ser direto, técnico e objetivo, sem contextualizações narrativas.
+- Cada alternativa deve:
+  - ser autossuficiente e específica;
+  - indicar claramente se é correta ou incorreta;
+  - conter explicação objetiva e técnica do motivo.
+- A questão deve avaliar raciocínio, interpretação e aplicação prática — não apenas memorização.
+
+⚠️ **Formato obrigatório**
+Responda APENAS com um JSON válido, sem qualquer texto fora do JSON, seguindo exatamente esta estrutura:
+
 {{
     "{question_number}": {{
-        "text": "...",
+        "text": "Texto da nova questão (deve ser completamente diferente da questão original e das outras existentes)",
         "options": [
-            {{"option": "...", "is_correct": true/false, "explanation": "..."}},
-            {{"option": "...", "is_correct": true/false, "explanation": "..."}},
-            {{"option": "...", "is_correct": true/false, "explanation": "..."}},
-            {{"option": "...", "is_correct": true/false, "explanation": "..."}}
+            {{"option": "Alternativa 1", "is_correct": true/false, "explanation": "Explicação técnica objetiva"}},
+            {{"option": "Alternativa 2", "is_correct": true/false, "explanation": "Explicação técnica objetiva"}},
+            {{"option": "Alternativa 3", "is_correct": true/false, "explanation": "Explicação técnica objetiva"}},
+            {{"option": "Alternativa 4", "is_correct": true/false, "explanation": "Explicação técnica objetiva"}}
         ],
-        "resolution": "..."
+        "resolution": "Resumo da resolução e raciocínio da questão, explicando por que a alternativa correta é a melhor e como as incorretas se desviam do conceito correto"
     }}
 }}
 
-Documentos:
-{context}
-"""
+📋 **QUESTÃO ORIGINAL (que será substituída):**
+{json.dumps(original_mcq.get(question_number, {}), ensure_ascii=False, indent=2)}
 
+📚 **OUTRAS QUESTÕES EXISTENTES (evite repetir temas/abordagens):**
+{json.dumps({k: v for k, v in original_mcq.items() if k != question_number}, ensure_ascii=False, indent=2)}
+
+📖 **Documentos de apoio para criar a NOVA questão:**
+{context}
+
+IMPORTANTE: A nova questão deve ser tão rica, complexa e bem fundamentada quanto as questões existentes, mas abordando um aspecto diferente do tópico ou utilizando um ângulo de análise distinto.
+"""
     response_text = get_gemini_response(prompt, temperature)
 
     try:
@@ -346,7 +373,7 @@ def generate_mcq(data: MCQRequest):
     # Adiciona fontes ao JSON retornado
     mcq["sources"] = [doc.metadata.get("source", "Desconhecida") for doc in relevant_docs]
 
-    print(dict_questions)
+    #print(dict_questions)
     return mcq
 
 @router.post("/check_answer/")
