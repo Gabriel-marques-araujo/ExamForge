@@ -63,6 +63,7 @@ const QuestionsPage: React.FC = () => {
   const [showFeedback, setShowFeedback] = useState(false);
   const [results, setResults] = useState<{ [key: number]: any }>({});
   const [isLoadingNewQuestion, setIsLoadingNewQuestion] = useState(false);
+  const [isLoadingFinalEvaluation, setIsLoadingFinalEvaluation] = useState(false);
 
   // Inicializa lista de questões
   useEffect(() => {
@@ -108,6 +109,16 @@ const QuestionsPage: React.FC = () => {
     }
   };
 
+  const getFinalEvaluation = async () => {
+    try {
+      const response = await axios.post("http://localhost:8000/rag/final_evaluation");
+      return response.data.feedback;
+    } catch (error) {
+      console.error("Erro ao obter avaliação final:", error);
+      return "Não foi possível gerar o feedback personalizado.";
+    }
+  };
+
   const handleNext = async () => {
     const chosenOption = selectedAnswers[currentQuestion.id];
 
@@ -145,233 +156,244 @@ const QuestionsPage: React.FC = () => {
 
   // Substituir questão (novo MCQ)
   const newQuestion = async () => {
-  try {
-    setIsLoadingNewQuestion(true);   // ⬅️ Ativa tela de loading
+    try {
+      setIsLoadingNewQuestion(true);
 
-    const payload = {
-      original_mcq: questions.reduce((acc: any, q: Question, idx: number) => {
-        acc[`question ${idx + 1}`] = q.rawData;
-        return acc;
-      }, {}),
-      question_number: `question ${currentQuestionIndex + 1}`,
-      topic,
-    };
-
-    const response = await axios.post(
-      "http://localhost:8000/rag/substitute_question/",
-      payload
-    );
-
-    const newQData = response.data[`question ${currentQuestionIndex + 1}`];
-    if (!newQData) return;
-
-    const formattedQuestion: Question = {
-      id: currentQuestion.id,
-      enunciado: newQData.enunciado || newQData.question || newQData.text || "Questão substituída",
-      alternativas: newQData.alternativas || newQData.options || newQData.choices || [],
-      correctAnswer: newQData.correctAnswer || newQData.correct_answer || newQData.answer || "",
-      explicacao: newQData.explicacao || newQData.explanation || newQData.details || "",
-      rawData: newQData,
-    };
-
-    const updatedQuestions = [...questions];
-    updatedQuestions[currentQuestionIndex] = formattedQuestion;
-
-    setSelectedAnswers((prev) => {
-      const updated = { ...prev };
-      delete updated[currentQuestion.id];
-      return updated;
-    });
-
-    setResults((prev) => {
-      const updated = { ...prev };
-      delete updated[currentQuestion.id];
-      return updated;
-    });
-
-    setShowFeedback(false);
-    setShowWarning(false);
-
-    setQuestions(updatedQuestions);
-  } catch (error) {
-    console.error("Erro ao substituir questão:", error);
-  } finally {
-    setIsLoadingNewQuestion(false);  // ⬅️ Desativa loading
-  }
-};
-
-  const handleSubmit = () => {
-    const correct = Object.values(results).filter((r) => r.is_correct).length;
-    const totalQuestions = questions.length;
-    const score = (correct / totalQuestions) * 10;
-    const wrong = totalQuestions - correct;
-
-    navigate("/resultado", {
-      state: {
-        score,
-        totalQuestions,
-        correctAnswers: correct,
-        wrongAnswers: wrong,
-        questions : parsedQuestions,
-        userAnswers: selectedAnswers,
-        timeMinutes,
+      const payload = {
+        original_mcq: questions.reduce((acc: any, q: Question, idx: number) => {
+          acc[`question ${idx + 1}`] = q.rawData;
+          return acc;
+        }, {}),
+        question_number: `question ${currentQuestionIndex + 1}`,
         topic,
-        initialFiles: state?.initialFiles || [],
-        results,
-      },
-    });
+      };
+
+      const response = await axios.post(
+        "http://localhost:8000/rag/substitute_question/",
+        payload
+      );
+
+      const newQData = response.data[`question ${currentQuestionIndex + 1}`];
+      if (!newQData) return;
+
+      const formattedQuestion: Question = {
+        id: currentQuestion.id,
+        enunciado: newQData.enunciado || newQData.question || newQData.text || "Questão substituída",
+        alternativas: newQData.alternativas || newQData.options || newQData.choices || [],
+        correctAnswer: newQData.correctAnswer || newQData.correct_answer || newQData.answer || "",
+        explicacao: newQData.explicacao || newQData.explanation || newQData.details || "",
+        rawData: newQData,
+      };
+
+      const updatedQuestions = [...questions];
+      updatedQuestions[currentQuestionIndex] = formattedQuestion;
+
+      setSelectedAnswers((prev) => {
+        const updated = { ...prev };
+        delete updated[currentQuestion.id];
+        return updated;
+      });
+
+      setResults((prev) => {
+        const updated = { ...prev };
+        delete updated[currentQuestion.id];
+        return updated;
+      });
+
+      setShowFeedback(false);
+      setShowWarning(false);
+
+      setQuestions(updatedQuestions);
+    } catch (error) {
+      console.error("Erro ao substituir questão:", error);
+    } finally {
+      setIsLoadingNewQuestion(false);
+    }
   };
+
+  const handleSubmit = async () => {
+    setIsLoadingFinalEvaluation(true);
+
+    try {
+      const feedbackText = await getFinalEvaluation();
+
+      const correct = Object.values(results).filter((r) => r.is_correct).length;
+      const totalQuestions = questions.length;
+      const score = (correct / totalQuestions) * 10;
+      const wrong = totalQuestions - correct;
+
+      navigate("/resultado", {
+        state: {
+          score,
+          totalQuestions,
+          correctAnswers: correct,
+          wrongAnswers: wrong,
+          questions: questions,
+          userAnswers: selectedAnswers,
+          timeMinutes,
+          topic,
+          initialFiles: state?.initialFiles || [],
+          results,
+          feedbackText,
+        },
+      });
+    } catch (error) {
+      console.error("Erro ao finalizar simulado:", error);
+    } finally {
+      setIsLoadingFinalEvaluation(false);
+    }
+  };
+
   return (
-  <>
-    <NavBar />
-    {noQuestions && (
-      <div className="questions-container">
-        <div className="no-questions">
-          <h2>Nenhuma questão foi carregada 😕</h2>
-          <button onClick={() => navigate(-1)} className="back-button">
-            Voltar
-          </button>
+    <>
+      <NavBar />
+      {noQuestions && (
+        <div className="questions-container">
+          <div className="no-questions">
+            <h2>Nenhuma questão foi carregada 😕</h2>
+            <button onClick={() => navigate(-1)} className="back-button">
+              Voltar
+            </button>
+          </div>
         </div>
-      </div>
-    )}
+      )}
 
-    {!noQuestions && (
-      <div className="questions-container">
-        <div className="question-card">
-          <div className="top-info-bar">
-            <div className="topic-section">
-              <span className="label">Tópico:</span>
-              <span className="value">{topic}</span>
-            </div>
-
-            <div className="timer-section">
-              <span className="label">
-                <img src="/clock.svg" alt="relógio" className="clock" /> Tempo Restante:
-              </span>
-              <span className="value">{formatTime(timeLeft)}</span>
-            </div>
-          </div>
-
-          <div className="progress-bar">
-            <div className="progress" style={{ width: `${progress}%` }} />
-          </div>
-          <div className="question-content-wrapper">
-            {isLoadingNewQuestion && (
-              <div className="question-loading-overlay">
-                <div className="spinner"></div>
-                <p>Gerando nova questão...</p>
-              </div>
-            )}
-            <div className={`question-content ${isLoadingNewQuestion ? "question-blur-area" : ""}`}>
-              <div className="question-header">
-                <div className="question-number">{currentQuestion.id}</div>
-                <p className="question-text">{currentQuestion.enunciado}</p>
+      {!noQuestions && (
+        <div className="questions-container">
+          <div className="question-card">
+            <div className="top-info-bar">
+              <div className="topic-section">
+                <span className="label">Tópico:</span>
+                <span className="value">{topic}</span>
               </div>
 
-              {showWarning && (
-                <p className="warning-text">⚠️ Selecione uma alternativa para continuar.</p>
+              <div className="timer-section">
+                <span className="label">
+                  <img src="/clock.svg" alt="relógio" className="clock" /> Tempo Restante:
+                </span>
+                <span className="value">{formatTime(timeLeft)}</span>
+              </div>
+            </div>
+
+            <div className="progress-bar">
+              <div className="progress" style={{ width: `${progress}%` }} />
+            </div>
+            <div className="question-content-wrapper">
+              {(isLoadingNewQuestion || isLoadingFinalEvaluation) && (
+                <div className="question-loading-overlay">
+                  <div className="spinner"></div>
+                  <p>{isLoadingNewQuestion ? "Gerando nova questão..." : "Finalizando Quiz"}</p>
+                </div>
               )}
+              <div className={`question-content ${(isLoadingNewQuestion || isLoadingFinalEvaluation) ? "question-blur-area" : ""}`}>
+                <div className="question-header">
+                  <div className="question-number">{currentQuestion.id}</div>
+                  <p className="question-text">{currentQuestion.enunciado}</p>
+                </div>
 
-              <div className="options">
-                {currentQuestion.alternativas.map((alt, idx) => {
-                  const text = typeof alt === "string" ? alt : alt.option;
-                  const selected = selectedAnswers[currentQuestion.id] === text;
-                  const isDisabled = isLoadingNewQuestion || showFeedback;
+                {showWarning && (
+                  <p className="warning-text">⚠️ Selecione uma alternativa para continuar.</p>
+                )}
 
-                  return (
-                    <label
-                      key={idx}
-                      className={`option-box
+                <div className="options">
+                  {currentQuestion.alternativas.map((alt, idx) => {
+                    const text = typeof alt === "string" ? alt : alt.option;
+                    const selected = selectedAnswers[currentQuestion.id] === text;
+                    const isDisabled = isLoadingNewQuestion || isLoadingFinalEvaluation || showFeedback;
+
+                    return (
+                      <label
+                        key={idx}
+                        className={`option-box
                         ${selected ? "selected" : ""}
                         ${showFeedback && selected && feedback?.is_correct ? "correct" : ""}
                         ${showFeedback && selected && !feedback?.is_correct ? "wrong" : ""}
                         ${isDisabled ? "disabled-option" : ""}
                       `}
-                      onClick={() =>
-                        !isDisabled && handleSelect(currentQuestion.id, text) 
-                      }
-                    >
-                      <input
-                        type="radio"
-                        name={`question-${currentQuestion.id}`}
-                        value={text}
-                        checked={selected}
-                        onChange={() => handleSelect(currentQuestion.id, text)}
-                        disabled={isLoadingNewQuestion}
-                        style={{ display: "none" }}
-                      />
-                      {text}
-                    </label>
-                  );
-                })}
-              </div>
-              
-          <div className={`actions ${currentQuestionIndex === 0 ? "first-question" : ""}`}>
-            {currentQuestionIndex > 0 && (
-              <button
-                className="back-button"
-                onClick={handleBack}
-                disabled={isLoadingNewQuestion}
-              >
-                Voltar
-              </button>
-            )}
-
-            <button
-              className="new-question-button" 
-              onClick={newQuestion}
-              disabled={isLoadingNewQuestion}
-            >
-              Substituir Questão
-            </button>
-
-            <button
-              className={showFeedback ? "next-button" : "submit-button"}
-              onClick={handleNext}
-              disabled={isLoadingNewQuestion}
-            >
-              {showFeedback
-                ? currentQuestionIndex < questions.length - 1
-                  ? "Próxima"
-                  : "Finalizar"
-                : "Confirmar Resposta"}
-            </button>
-          </div>
-    {!isLoadingNewQuestion && showFeedback && feedback && (
-                <div
-                  className={`feedback ${
-                    feedback.is_correct ? "feedback-correto" : "feedback-incorreto"
-                  }`}
-                >
-                  <p><strong>Resposta:</strong> {feedback.is_correct ? "✔️ Correta" : "❌ Incorreta"}</p>
-                  <p><strong>Alternativa escolhida:</strong> {feedback.chosen_option}</p>
-                  <p><strong>Explicação:</strong> {feedback.is_correct ? feedback.explanation : feedback.explanation_chosen}</p>
-
-                  {!feedback.is_correct && (
-                    <>
-                      <p><strong>Alternativa correta:</strong> {feedback.correct_option}</p>
-                      <p><strong>Por que está correta:</strong> {feedback.explanation_correct}</p>
-                    </>
-                  )}
+                        onClick={() =>
+                          !isDisabled && handleSelect(currentQuestion.id, text)
+                        }
+                      >
+                        <input
+                          type="radio"
+                          name={`question-${currentQuestion.id}`}
+                          value={text}
+                          checked={selected}
+                          onChange={() => handleSelect(currentQuestion.id, text)}
+                          disabled={isLoadingNewQuestion || isLoadingFinalEvaluation}
+                          style={{ display: "none" }}
+                        />
+                        {text}
+                      </label>
+                    );
+                  })}
                 </div>
-              )}
+
+                <div className={`actions ${currentQuestionIndex === 0 ? "first-question" : ""}`}>
+                  {currentQuestionIndex > 0 && (
+                    <button
+                      className="back-button"
+                      onClick={handleBack}
+                      disabled={isLoadingNewQuestion || isLoadingFinalEvaluation}
+                    >
+                      Voltar
+                    </button>
+                  )}
+
+                  <button
+                    className="new-question-button"
+                    onClick={newQuestion}
+                    disabled={isLoadingNewQuestion || isLoadingFinalEvaluation}
+                  >
+                    Substituir Questão
+                  </button>
+
+                  <button
+                    className={showFeedback ? "next-button" : "submit-button"}
+                    onClick={handleNext}
+                    disabled={isLoadingNewQuestion || isLoadingFinalEvaluation}
+                  >
+                    {showFeedback
+                      ? currentQuestionIndex < questions.length - 1
+                        ? "Próxima"
+                        : "Finalizar"
+                      : "Confirmar Resposta"}
+                  </button>
+                </div>
+                {!isLoadingNewQuestion && !isLoadingFinalEvaluation && showFeedback && feedback && (
+                  <div
+                    className={`feedback ${feedback.is_correct ? "feedback-correto" : "feedback-incorreto"
+                      }`}
+                  >
+                    <p><strong>Resposta:</strong> {feedback.is_correct ? "✔️ Correta" : "❌ Incorreta"}</p>
+                    <p><strong>Alternativa escolhida:</strong> {feedback.chosen_option}</p>
+                    <p><strong>Explicação:</strong> {feedback.is_correct ? feedback.explanation : feedback.explanation_chosen}</p>
+
+                    {!feedback.is_correct && (
+                      <>
+                        <p><strong>Alternativa correta:</strong> {feedback.correct_option}</p>
+                        <p><strong>Por que está correta:</strong> {feedback.explanation_correct}</p>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
 
-    {isTimeOver && (
-      <div className="time-over-modal">
-        <div className="time-over-content">
-          <h2>O tempo acabou!</h2>
-          <button className="submit-button" onClick={handleSubmit}>
-            Finalizar Simulado
-          </button>
+      {isTimeOver && (
+        <div className="time-over-modal">
+          <div className="time-over-content">
+            <h2>O tempo acabou!</h2>
+            <button className="submit-button" onClick={handleSubmit}>
+              Finalizar Simulado
+            </button>
+          </div>
         </div>
-      </div>
-    )}
-  </>
-);
+      )}
+    </>
+  );
 };
 export default QuestionsPage;
