@@ -1,6 +1,5 @@
 import os
 import json
-import re
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
@@ -101,8 +100,7 @@ def obter_letra_enumeração(indice):
     return vogais[indice % len(vogais)]
 
 # Geração de questões de múltipla escolha (RAG)
-def generate_mcq_from_context(context: str, topic: str, questions, qnt_questoes=2, temperature: float = 0.5):
-
+def generate_mcq_from_context(context: str, topic: str, qnt_questoes: int = 2, temperature: float = 0.5):
     prompt = f"""
 Você é um especialista altamente competente no(s) tema(s): {topic}.
 Sua tarefa é gerar {qnt_questoes} questões de múltipla escolha de alta qualidade.
@@ -116,16 +114,11 @@ Sua tarefa é gerar {qnt_questoes} questões de múltipla escolha de alta qualid
 
 🎯 **Regras de elaboração das questões**
 - Cada questão deve ter exatamente 4 alternativas (A, B, C, D).
-- As questões serão enumeradas por meios externos, então não é necessário especificar o item.
 - Apenas UMA alternativa deve ser correta.
-- Varia a posição da resposta correta, de forma a não repetir uma mesma alternativa muitas vezes. Ex: A primeira é a), a segunda c) a terceira d) etc...
-- NÃO crie cenários fictícios, histórias, personagens, empresas imaginárias ou situações inventadas.
-- Os enunciados devem ser diretos, técnicos e objetivos, sem contextualizações narrativas.
-- Cada alternativa deve:
-  - ser autossuficiente e específica;
-  - indicar claramente se é correta ou incorreta;
-  - conter explicação objetiva e técnica do motivo.
-- As questões devem avaliar raciocínio, interpretação e aplicação prática — não apenas memorização.
+- Varia a posição da resposta correta de forma equilibrada.
+- NÃO crie cenários fictícios, histórias ou situações inventadas.
+- Os enunciados devem ser diretos, técnicos e objetivos.
+- Cada alternativa deve conter explicação objetiva e técnica.
 
 ⚠️ **Formato obrigatório**
 Responda APENAS com um JSON válido, sem qualquer texto fora do JSON, seguindo exatamente esta estrutura:
@@ -161,30 +154,27 @@ Responda APENAS com um JSON válido, sem qualquer texto fora do JSON, seguindo e
         with open(QUESTIONS_PATH, "w", encoding="utf-8") as arquivo:
             json.dump(mcq, arquivo, ensure_ascii=False, indent=4)
 
-        if not os.path.exists(QUESTIONS_PATH):
-            return {"status": "error", "message": "Arquivo questions.json não encontrado"}
+        # Atualiza dict_questions global
+        global dict_questions
+        dict_questions = {}
+        for i, question_key in enumerate(mcq.keys(), 1):
+            if question_key == "sources":
+                continue
 
-        with open(QUESTIONS_PATH, "r", encoding="utf-8") as arquivo:
-            exame = json.load(arquivo)
+            question = mcq[question_key]
+            correct_opt = None
+            for opt in question.get("options", []):
+                if opt.get("is_correct", False):
+                    correct_opt = opt["option"]
+                    break
 
-
-        for i, question_key in enumerate(exame.keys(), 1):
-            question = exame[question_key]
-            text_chosen_option = ""
-            text_correct_option = ""
-
-            options = question['options']
-            
-            for j, option in enumerate(options):
-                if (option['is_correct']):
-                    text_correct_option = option["option"]
-
-            dict_questions[f"question {i}"] = {
+            dict_questions[question_key] = {
                 "text": question["text"],
-                "correct_option": text_correct_option,
-                "chosen_option": text_chosen_option
-        }
-        
+                "correct_option": correct_opt,
+                "chosen_option": "",
+                "is_correct": False
+            }
+
         return mcq
 
     except Exception as e:
@@ -407,8 +397,13 @@ def generate_mcq(data: MCQRequest):
     # Reseta dict_questions para novo exame
     dict_questions = {}
     
-    mcq = generate_mcq_from_context(context, data.topic, data.qnt_questoes, temperature=0.5)
-    
+    mcq = generate_mcq_from_context(
+        context=context,
+        topic=data.topic,
+        qnt_questoes=data.qnt_questoes, 
+        temperature=0.5
+    )
+
     # Inicializa dict_questions com a estrutura correta
     for i, question_key in enumerate(mcq.keys(), 1):
         if question_key == "sources":
