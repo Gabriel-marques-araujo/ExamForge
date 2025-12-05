@@ -1,0 +1,132 @@
+{
+    "question 1": {
+        "text": "Qual das seguintes afirmações descreve corretamente a complexidade de tempo do algoritmo Quicksort?",
+        "options": [
+            {
+                "option": "É sempre linear (O(n)) em todos os casos, tornando-o consistentemente o mais rápido.",
+                "is_correct": false,
+                "explanation": "A complexidade média do Quicksort é linearithmic (O(n log n)), e não linear (O(n)), e o pior caso é quadrático (O(n^2))."
+            },
+            {
+                "option": "Apresenta complexidade quadrática (O(n^2)) no pior caso, mas é linear em média.",
+                "is_correct": true,
+                "explanation": "O documento afirma que o Quicksort é 'quadrático no pior caso' e 'linear em média', sendo esta última uma referência à sua complexidade de tempo média O(n log n) para ordenação."
+            },
+            {
+                "option": "Sua complexidade é sempre logarítmica (O(log n)), independentemente da entrada.",
+                "is_correct": false,
+                "explanation": "A complexidade logarítmica é muito baixa para um algoritmo de ordenação geral, e o Quicksort não mantém essa complexidade de forma consistente."
+            },
+            {
+                "option": "É um algoritmo elementar, com desempenho similar a métodos de ordenação simples em todas as situações.",
+                "is_correct": false,
+                "explanation": "O Quicksort é geralmente 'muito mais rápido' que algoritmos elementares, embora possa ser tão lento quanto eles em raras instâncias no pior caso."
+            }
+        ],
+        "resolution": "A questão avalia o conhecimento sobre as características de desempenho do Quicksort. O documento explicitamente menciona que o algoritmo é 'linear em média' e 'quadrático no pior caso', o que corresponde à alternativa B."
+    },
+    "question 2": {
+        "text": "No algoritmo Heap Sort, a função MAX-HEAPIFY é fundamental para manter a propriedade de heap. Qual é a ação principal realizada por MAX-HEAPIFY quando um nó é menor que seu filho, violando a propriedade de max-heap?",
+        "options": [
+            {
+                "option": "Inserir o nó em uma nova posição na raiz da heap, reconstruindo a estrutura.",
+                "is_correct": false,
+                "explanation": "A operação MAX-HEAPIFY não envolve a inserção na raiz ou a reconstrução completa da heap, mas sim a correção de uma violação local da propriedade de heap."
+            },
+            {
+                "option": "Remover o nó e todos os seus descendentes, pois a estrutura da heap foi comprometida.",
+                "is_correct": false,
+                "explanation": "O objetivo de MAX-HEAPIFY é corrigir a violação da propriedade de heap, não remover elementos da estrutura."
+            },
+            {
+                "option": "Trocar o nó com o filho maior e mover-se para baixo na árvore, continuando até que o nó não seja menor que seus filhos.",
+                "is_correct": true,
+                "explanation": "O processo descrito para eliminar a violação da propriedade de heap é 'Trocar com o ﬁlho maior. ○ Mover para baixo a árvore. ○ Continuar até que o nó não seja menor que os ﬁlhos.'"
+            },
+            {
+                "option": "Trocar o nó com o filho menor e mover-se para cima na árvore até que a propriedade seja restaurada.",
+                "is_correct": false,
+                "explanation": "A troca é feita com o filho maior para manter a propriedade de max-heap, e o movimento é para baixo na árvore, não para cima."
+            }
+        ],
+        "resolution": "A questão foca no mecanismo interno da operação MAX-HEAPIFY. O documento detalha as etapas para corrigir uma violação da propriedade de heap, que incluem trocar o nó com o filho maior e descer na árvore até que a propriedade seja restabelecida, conforme descrito na alternativa C."
+    },
+    "question 3": {
+        "text": "O algoritmo Quicksort, inventado por C.A.R. Hoare, baseia-se em um problema fundamental para realizar a ordenação de um vetor. Qual é esse problema central?",
+        "options": [
+            {
+                "option": "A fusão de subvetores já ordenados, combinando-os em um único vetor maior.",
+                "is_correct": false,
+                "explanation": "Esta é a base do algoritmo Merge Sort, que combina subvetores ordenados, não do Quicksort."
+            },
+            {
+                "option": "A construção de uma estrutura de dados de árvore balanceada para otimizar as operações de busca.",
+                "is_correct": false,
+                "explanation": "Embora árvores sejam usadas em outros algoritmos e estruturas de dados, não é o núcleo do Quicksort."
+            },
+            {
+                "option": "A iteração sobre o vetor, comparando e trocando elementos adjacentes repetidamente até que o vetor esteja ordenado.",
+                "is_correct": false,
+                "explanation": "Isso descreve algoritmos de ordenação elementares como Bubble Sort ou Insertion Sort, não o Quicksort."
+            },
+            {
+                "option": "O problema da separação (partition subproblem), que organiza os elementos de um subvetor em torno de um pivô.",
+                "is_correct": true,
+                "explanation": "O documento afirma explicitamente que 'O núcleo do algoritmo Quicksort é o seguinte problema da separação (= partition subproblem)'."
+            }
+        ],
+        "resolution": "A questão busca identificar o princípio fundamental do Quicksort. O documento estabelece claramente que o 'Problema da Separação' (partition subproblem) é o núcleo do algoritmo, o que é corretamente expresso na alternativa D."
+    },
+    "question 4": {
+        "text": "A complexidade de tempo de execução da operação MAX-HEAPIFY é O(lgn). Qual das seguintes opções explica corretamente essa complexidade?",
+        "options": [
+            {
+                "option": "O algoritmo traça um caminho da raiz até as folhas, e o maior caminho tem tamanho h (altura da árvore), onde h é proporcional a log n.",
+                "is_correct": true,
+                "explanation": "O documento explica que 'O algoritmo traça um caminho da raiz até as folhas (maior caminho tem tamanho h)' e que o 'Tempo de execução é O(h) ou O(lgn)', pois a altura de uma heap é logarítmica em relação ao número de elementos."
+            },
+            {
+                "option": "O algoritmo percorre todos os elementos do vetor para encontrar o maior filho, resultando em um tempo linear.",
+                "is_correct": false,
+                "explanation": "MAX-HEAPIFY não percorre todos os elementos do vetor; ele segue um caminho específico na árvore, realizando comparações em cada nível."
+            },
+            {
+                "option": "Em cada nível da árvore, são realizadas operações de inserção e remoção de elementos, que são O(1) no melhor caso.",
+                "is_correct": false,
+                "explanation": "MAX-HEAPIFY foca em comparações e trocas para manter a propriedade de heap, não em inserções/remoções gerais, e sua complexidade não é O(1) por nível de forma a justificar O(lgn) como um somatório simples."
+            },
+            {
+                "option": "A operação envolve a comparação de cada elemento com todos os outros elementos da heap, levando a uma complexidade quadrática.",
+                "is_correct": false,
+                "explanation": "A complexidade quadrática seria muito ineficiente e não corresponde ao funcionamento de MAX-HEAPIFY, que se restringe a um caminho da árvore."
+            }
+        ],
+        "resolution": "A questão aborda a justificativa para a complexidade de tempo de MAX-HEAPIFY. O documento descreve que a operação segue um caminho da raiz até as folhas, e como a altura de uma heap é logarítmica, a complexidade é O(lgn), o que é corretamente explicado na alternativa A."
+    },
+    "question 5": {
+        "text": "Considerando os algoritmos de ordenação Quicksort e Heapsort, qual das seguintes afirmações é verdadeira?",
+        "options": [
+            {
+                "option": "O Heapsort é um algoritmo elementar, e seu desempenho é geralmente inferior ao Quicksort em todos os casos.",
+                "is_correct": false,
+                "explanation": "Heapsort não é um algoritmo elementar e possui uma complexidade de pior caso mais estável (O(n log n)) do que o Quicksort (O(n^2)), o que significa que seu desempenho não é inferior em todos os casos."
+            },
+            {
+                "option": "Ambos os algoritmos utilizam o problema da separação como seu núcleo para organizar os elementos.",
+                "is_correct": false,
+                "explanation": "Apenas o Quicksort utiliza o problema da separação como seu núcleo; o Heapsort baseia-se na estrutura de heap e na operação MAX-HEAPIFY."
+            },
+            {
+                "option": "O Quicksort foi inventado por C.A.R. Hoare em 1962 e tem como objetivo rearranjar um vetor em ordem crescente.",
+                "is_correct": true,
+                "explanation": "O documento afirma que 'O algoritmo Quicksort, inventado por C.A.R. Hoare em 1962, resolve o problema [da ordenação]', que consiste em rearranjar um vetor em ordem crescente."
+            },
+            {
+                "option": "A complexidade de tempo do Quicksort é sempre O(n log n), enquanto a do Heapsort é O(n^2) no pior caso.",
+                "is_correct": false,
+                "explanation": "O Quicksort tem complexidade O(n^2) no pior caso, não sempre O(n log n). O Heapsort tem complexidade O(n log n) no pior caso, não O(n^2)."
+            }
+        ],
+        "resolution": "A questão compara características gerais dos dois algoritmos. A alternativa C é a única que apresenta uma afirmação factual e diretamente suportada pelos documentos, especificamente sobre a invenção e o objetivo do Quicksort."
+    }
+}

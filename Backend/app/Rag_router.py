@@ -9,7 +9,6 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings,ChatGoogleGenera
 from fpdf import FPDF
 from fastapi.responses import FileResponse
 
-
 load_dotenv()
 
 router = APIRouter(prefix="/rag", tags=["RAG Gemini MCQ"])
@@ -140,6 +139,9 @@ Responda APENAS com um JSON válido, sem qualquer texto fora do JSON, seguindo e
 {context}
 """
 
+Documentos:
+{context}
+"""
     response_text = get_gemini_response(prompt, temperature)
 
     try:
