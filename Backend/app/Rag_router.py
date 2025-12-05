@@ -138,10 +138,6 @@ Responda APENAS com um JSON válido, sem qualquer texto fora do JSON, seguindo e
 📚 **Documentos de apoio:**
 {context}
 """
-
-Documentos:
-{context}
-"""
     response_text = get_gemini_response(prompt, temperature)
 
     try:
@@ -329,10 +325,10 @@ Produzir um texto único que:
 
 **Estrutura EXATA que você deve seguir (incluindo quebras de linha):**
 
-"Com base nas suas respostas, percebi que você precisa reforçar seus estudos em **<áreas que o aluno errou>**.\n
+Com base nas suas respostas, percebi que você precisa reforçar seus estudos em **<áreas que o aluno errou>**.\n
 Você demonstrou dificuldade em **<conceitos ou tópicos específicos que o aluno errou>**.\n
 **Sugestão**: <recomendação direta e prática do que estudar>.\n
-Isso vai ajudar a melhorar seu desempenho nesses pontos."
+Isso vai ajudar a melhorar seu desempenho nesses pontos.
 
 Caso o aluno tenha acertado a maioria das questões e NÃO haja áreas reais de dificuldade, você DEVE adaptar a estrutura para evitar frases artificiais como “nenhuma área” ou “nenhum conceito”. Nesse caso, siga estas substituições obrigatórias:
 
@@ -384,8 +380,7 @@ class SubstituteQuestionRequest(BaseModel):
 # Endpoints
 @router.post("/generate_mcq/")
 def generate_mcq(data: MCQRequest):
-    """Gera questões de múltipla escolha baseadas no tema informado."""
-    global dict_questions
+    """Gera questões de múltipla escolha baseadas no tema informado."""    
     
     if not db:
         return JSONResponse(status_code=500, content={"error": "Banco vetorial não inicializado."})
