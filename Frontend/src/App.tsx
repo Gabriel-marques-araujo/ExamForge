@@ -8,10 +8,14 @@ function App() {
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
   const [isQuestionnaireModalOpen, setIsQuestionnaireModalOpen] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem("theme") === "dark";
+  });
 
   return (
     <>
-      <NavBar className={isFilesModalOpen || isQuestionnaireModalOpen ? 'blur' : ''} />
+      <NavBar className={isFilesModalOpen || isQuestionnaireModalOpen ? 'blur' : ''} 
+      onThemeChange={setDarkMode}/>
       <main className={isFilesModalOpen || isQuestionnaireModalOpen ? 'blur' : ''}>
         <div className="container">
           <div className="text-area">
@@ -24,8 +28,8 @@ function App() {
           </div>
           <div className="image-area">
             <img
-              src="/image.svg"
-              alt="imagem com livros e questionários saindo deles"
+              src={darkMode ? "/logo2-dark.svg" : "/logo2.svg"}
+              alt="aluna com computador pensando em questionários"
               className="books-image"
             />
           </div>
@@ -48,7 +52,6 @@ function App() {
         />
       )}
 
-      {/* Modal de configuração do questionário */}
       {isQuestionnaireModalOpen && (
         <QuestionnaireModal
           initialFiles={uploadedFiles}

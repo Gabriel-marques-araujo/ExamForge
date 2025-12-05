@@ -1,52 +1,86 @@
-.navbar{
-    width: 100vw;
-    background: #FFFFFF;
-    position: fixed;
-    margin: 0;
-    padding: 0;
-    top:0;
+* {
+  transition: background-color 0.4s ease, color 0.4s ease;
 }
 
-.navbar-list{
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
+body {
+  background-color: #f5f6fa;
+  color: #1d2234;
+  margin: 0;
+  font-family: "Inter", sans-serif;
 }
 
-.navbar-title{
-    padding: 0.8rem 0 0 1rem;
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 70px;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  box-sizing: border-box;
+  justify-content: center;
 }
 
-.navbar-logo{
-    height: 2.4rem;
+.navbar-list {
+  justify-content: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
 }
 
-.dark-mode-toggle{
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    margin: 0.4rem 2rem 0 0;
-    display: flex; 
-    align-items: center;
-    justify-content: center;
+.navbar-logo {
+  height: 40px;
+  padding-top: 1rem;
+  }
+
+.dark-mode-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease;
 }
 
-.dark-mode-toggle img {
+.dark-mode-toggle:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.navbar-mode {
+  width: 28px;
+  height: 28px;
   object-fit: contain;
-  transition: transform 0.2s ease;
 }
 
-.dark-mode-toggle:focus {
-  outline: none !important;
+body.dark {
+  background-color: #18181b;
+  color: #f1f1f1;
 }
 
-.dark-mode-toggle:focus-visible {
-  outline: none !important ;
+body.dark .navbar {
+  background-color: #2a2a2a;
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
 }
-.dark-mode-toggle:hover img {
-  transform: scale(1.1);
+
+body.dark .navbar-logo {
+  filter: brightness(0) invert(1);
 }
-.navbar-mode{
-    height: 2.5rem;
+
+body.dark .dark-mode-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode-toggle:active .navbar-mode {
+  transform: rotate(90deg);
+  transition: transform 0.3s ease;
 }

@@ -1,8 +1,51 @@
+.files-modal-2 {
+  position: fixed;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50%;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  border-radius: 30px;
+  padding: 1.5rem;
+  border: 0.1px solid #1D2234;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  max-height: 80vh;
+  overflow-y: auto;
+  
+}
+
+body.dark .files-modal-2{
+  background-color: #121212;
+}
+
+.files-modal-2::-webkit-scrollbar {
+    width: 8px; 
+}
+
+.files-modal-2::-webkit-scrollbar-track {
+    background: #f1f1f1; 
+    border-radius: 10px;
+    margin: 40px 0;
+}
+
+.files-modal-2::-webkit-scrollbar-thumb {
+    background-color: #E64756; 
+    border-radius: 10px; 
+    border: 1px solid #f1f1f1; 
+    min-height: 40px;
+}
+
+.files-modal-2::-webkit-scrollbar-thumb:hover {
+    background-color: #CC3D4D; 
+}
+
 .config-container {
   display: flex;
   flex-direction: column;
   gap: 3.0rem;
-  margin-top: 1rem;
+  margin-top: 0.5rem;
   width: 100%;
 }
 
@@ -10,6 +53,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  width: 100%;
 }
 
 .input-with-buttons {
@@ -39,16 +83,24 @@
 }
 
 .max-info {
-  font-size: 0.9rem;
+  font-size: 1rem;
   color: #535862;
   font-family: inter, sans-serif;
 }
 
+body.dark .max-info{
+  color: #B0b0b0;
+}
+
 .config-row label {
-  font-size: 1rem;
+  font-size: 1.2rem;
   font-weight: 500;
   color: #1D2234; 
   font-family: inter, sans-serif;
+}
+
+body.dark .config-row label{
+  color: #ffffff;
 }
 
 .input-with-buttons input {
@@ -58,22 +110,32 @@
   border-radius: 10px;
   padding: 0.75rem 0;
   font-family: inter, sans-serif;
-  font-size: 1rem;
+  font-size: 1.2rem;
   color: #1D2234; 
   background-color: #fff;
 }
 
-.instructions-textarea {
+body.dark .input-with-buttons input{
+  background-color: #212121;
+  color: #ffffff;
+}
+
+.topic-area {
   width: 100%;
   border: 1px solid #E9EAEB;
   border-radius: 12px;
   padding: 0.75rem;
   background-color: #FFFFFF;
   font-family: inter, sans-serif;
-  font-size: 1rem;
+  font-size: 1.2rem;
   resize: vertical;
   color: #1D2234;
   box-sizing: border-box;
+}
+
+body.dark .config-row textarea{
+  background-color: #212121;
+  color: #ffffff;
 }
 
 .instructions-textarea.error {
@@ -88,6 +150,42 @@
   font-family: inter, sans-serif;
 }
 
+body.dark .char-counter{
+  color: #B0b0b0;
+}
+
 .char-counter.error {
   color: #E64756;
+}
+
+.topic-area {
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: 1px solid #E9EAEB;
+  font-size: 1rem;
+  font-family: inter, sans-serif;
+  height: fit-content;        
+  line-height: 1.2;
+  box-sizing: border-box;
+  margin-top: 0.5rem;
+  resize: none;
+}
+
+@media (max-width: 1024px) {
+    .files-modal-2 {
+        padding: 1rem;
+        max-height: 70vh;
+        z-index: 1001;
+        overflow-y: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .files-modal-2 {
+        width: 80%;
+        padding: 1rem;
+        max-height: 75vh;
+        z-index: 1001;
+        overflow-y: scroll;
+    }
 }
