@@ -11,7 +11,7 @@ from langchain_community.document_loaders import (
 )
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_ollama import OllamaEmbeddings
 from dotenv import load_dotenv
 
 
@@ -22,16 +22,6 @@ router = APIRouter(prefix="/base", tags=["Criação de Base Vetorial"])
 DOCUMENTS_PATH = "./Documentos"
 CHROMA_PATH = "./chroma"
 COLLECTION_NAME = "exame_docs"
-
-GEMINI_KEY = os.getenv("GOOGLE_GEMINI_KEY")
-
-if not GEMINI_KEY:
-    raise ValueError("GOOGLE_GEMINI_KEY não encontrada no arquivo .env")
-
-
-os.environ["GOOGLE_API_KEY"] = GEMINI_KEY
-
-
 
 @router.post("/upload/")
 async def upload_file(file: UploadFile = File(...)):
@@ -66,10 +56,9 @@ def create_vector_database():
         )
 
     # Embeddings
-    embedding = GoogleGenerativeAIEmbeddings(
-        model="gemini-embedding-001",
-        api_key=GEMINI_KEY
-    )
+    embedding = OllamaEmbeddings(
+            model="nomic-embed-text"
+        )
 
     # Carregar OU criar banco Chroma
     db = Chroma(
@@ -149,7 +138,17 @@ def create_vector_database():
 
     print(f"NOVOS CHUNKS GERADOS: {len(documents)}")
 
-    db.add_documents(documents)
+    BATCH_SIZE = 20
+
+    for i in range(0, len(documents), BATCH_SIZE):
+        batch = documents[i:i + BATCH_SIZE]
+
+        db.add_documents(batch)
+
+        print(
+            f"Chunks processados: "
+            f"{min(i + BATCH_SIZE, len(documents))}/{len(documents)}"
+        )
 
     # Contar total final
     total_chunks = len(db.get()["ids"])

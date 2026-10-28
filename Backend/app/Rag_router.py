@@ -1,84 +1,215 @@
 import os
 import json
+import re
+import random
+import threading
+import traceback
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import lru_cache
+from pathlib import Path
+
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 from pydantic import BaseModel
 from langchain_chroma import Chroma
-from langchain_google_genai import GoogleGenerativeAIEmbeddings,ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama, OllamaEmbeddings
 from fpdf import FPDF
-from fastapi.responses import FileResponse
 
 load_dotenv()
 
-router = APIRouter(prefix="/rag", tags=["RAG Gemini MCQ"])
+router = APIRouter(prefix="/rag", tags=["RAG Ollama MCQ"])
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CHROMA_PATH = "./chroma"
+# ----------------------------------------------------------------------------
+# Configuração
+# ----------------------------------------------------------------------------
+# Por padrão mantém o comportamento original (arquivos ao lado deste módulo e ./chroma).
+# Para empacotar em executável, defina EXAMFORGE_DATA com uma pasta gravável.
+_data_env = os.getenv("EXAMFORGE_DATA")
+if _data_env:
+    DATA_DIR = Path(_data_env)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    CURRENT_DIR = str(DATA_DIR)
+    CHROMA_PATH = str(DATA_DIR / "chroma")
+else:
+    CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+    CHROMA_PATH = "./chroma"
+
+QUESTIONS_PATH = os.path.join(CURRENT_DIR, "questions.json")
 COLLECTION_NAME = "exame_docs"
 
-GEMINI_KEY = os.getenv("GOOGLE_GEMINI_KEY")
-if not GEMINI_KEY:
-    raise ValueError("GOOGLE_GEMINI_KEY não encontrada no arquivo .env")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:1.7b")   # alternativas: qwen3:4b-instruct, gemma3:4b, llama3.2:3b
+MCQ_WORKERS = int(os.getenv("MCQ_WORKERS", "1"))         # em CPU, 1 é o melhor
+OLLAMA_NUM_THREAD = int(os.getenv("OLLAMA_NUM_THREAD", "0"))  # 0 = automático; teste o nº de núcleos físicos
+CHUNKS_PER_QUESTION = 2
+CHUNK_MAX_CHARS = 800
+MCQ_NUM_PREDICT = 500
+MAX_RETRIES = 2
 
-os.environ["GOOGLE_API_KEY"] = GEMINI_KEY
+ANGULOS = [
+    "definição e conceito central",
+    "aplicação prática",
+    "comparação entre conceitos relacionados",
+    "identificar a afirmação incorreta ou exceção",
+    "causa e consequência",
+    "funcionamento interno / mecanismo",
+]
 
-chat_model = ChatGoogleGenerativeAI(
-    model = "gemini-2.5-flash",
-    temperature = 0.5,
-    api_key=GEMINI_KEY
-)
-
-# Configuração de embeddings e banco vetorial
-embedding_function = GoogleGenerativeAIEmbeddings(
-    model="gemini-embedding-001",
-    api_key=GEMINI_KEY
-)
+embedding_function = OllamaEmbeddings(model="nomic-embed-text", keep_alive=1800)  # segundos
 
 try:
     db = Chroma(
         persist_directory=CHROMA_PATH,
         embedding_function=embedding_function,
-        collection_name=COLLECTION_NAME
+        collection_name=COLLECTION_NAME,
     )
 except Exception as e:
     print(f"⚠️ Erro ao carregar banco vetorial: {e}")
     db = None
 
-dict_questions={}
+dict_questions = {}
 
-# Funções auxiliares
-def format_docs(docs):
-    """Formata documentos recuperados do banco vetorial."""
-    return "\n\n".join([
-        f"Fonte: {doc.metadata.get('source', 'Desconhecida')}\nConteúdo: {doc.page_content}"
-        for doc in docs
-    ])
 
-def get_gemini_response(prompt: str, temperature: float = 0.5):
-    """Gera resposta textual com o modelo Gemini via LangChain ChatGoogleGenerativeAI."""
+# ----------------------------------------------------------------------------
+# Ollama
+# ----------------------------------------------------------------------------
+@lru_cache(maxsize=16)
+def criar_modelo(temperature: float, num_predict: int, json_mode: bool):
+    """Cliente Ollama cacheado. Thinking desligado e saída JSON forçada quando pedido."""
+    kwargs = dict(
+        model=OLLAMA_MODEL,
+        temperature=temperature,
+        num_ctx=3072,
+        num_predict=num_predict,
+        keep_alive="30m",
+    )
+    if OLLAMA_NUM_THREAD > 0:
+        kwargs["num_thread"] = OLLAMA_NUM_THREAD
+    if json_mode:
+        kwargs["format"] = "json"
     try:
-        if not isinstance(prompt, str):
-            prompt = str(prompt)
+        return ChatOllama(**kwargs, reasoning=False)
+    except Exception:
+        return ChatOllama(**kwargs)
+
+
+def get_ollama_response(
+    prompt: str,
+    temperature: float = 0.3,
+    num_predict: int = MCQ_NUM_PREDICT,
+    json_mode: bool = False,
+) -> str:
+    """Gera resposta textual usando o Ollama local."""
+    try:
+        if not isinstance(prompt, str) or not prompt.strip():
+            raise ValueError("O prompt está vazio ou não é texto.")
 
         messages = [
-            ("system", "Você é um assistente técnico especializado em gerar questões de múltipla escolha."),
-            ("user", prompt)
+            (
+                "system",
+                "/no_think Você é um assistente educacional. Responda em português brasileiro. "
+                "Quando solicitado, retorne somente JSON válido.",
+            ),
+            ("user", prompt),
         ]
 
-        
-        ai_msg = chat_model.invoke(messages, temperature=temperature)
+        response = criar_modelo(temperature, num_predict, json_mode).invoke(messages)
+        content = response.content
 
-        # Retorna apenas o conteúdo da resposta
-        return ai_msg.content.strip()
+        if not isinstance(content, str):
+            raise ValueError("Resposta do Ollama em formato inesperado.")
+
+        content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+        if not content:
+            raise ValueError("O Ollama retornou uma resposta vazia.")
+
+        return content
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao gerar resposta: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=502,
+            detail=f"Falha ao consultar Ollama ({type(e).__name__}): {e}. "
+                   f"Verifique se o Ollama está ativo e se {OLLAMA_MODEL} está instalado.",
+        )
+
+
+def _warmup():
+    """Carrega os modelos na memória para a primeira requisição não pagar o cold start."""
+    try:
+        if db:
+            db.similarity_search("warmup", k=1)
+        criar_modelo(0.1, 8, False).invoke([("user", "/no_think ok")])
+    except Exception as e:
+        print(f"⚠️ Warmup falhou (ignorado): {e}")
+
+
+threading.Thread(target=_warmup, daemon=True).start()
+
+
+# ----------------------------------------------------------------------------
+# Utilitários
+# ----------------------------------------------------------------------------
+def format_docs(docs):
+    """Formata documentos recuperados do banco vetorial."""
+    return "\n\n".join(
+        f"Fonte: {doc.metadata.get('source', 'Desconhecida')}\n"
+        f"Conteúdo: {doc.page_content[:CHUNK_MAX_CHARS]}"
+        for doc in docs
+    )
+
+
+def parse_json_object(response_text: str) -> dict:
+    """Extrai um objeto JSON mesmo com cercas Markdown ou texto extra."""
+    if not isinstance(response_text, str) or not response_text.strip():
+        raise ValueError("A resposta do modelo está vazia.")
+
+    cleaned = re.sub(r"<think>.*?</think>", "", response_text, flags=re.DOTALL).strip()
+    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*```$", "", cleaned)
+
+    decoder = json.JSONDecoder()
+    for index, char in enumerate(cleaned):
+        if char == "{":
+            try:
+                value, _ = decoder.raw_decode(cleaned[index:])
+                if isinstance(value, dict):
+                    return value
+            except json.JSONDecodeError:
+                continue
+
+    raise ValueError(f"O modelo não retornou um objeto JSON válido. Início: {cleaned[:500]}")
+
+
+def validar_questao(questao: dict, nome: str = "questão") -> None:
+    """Valida o formato mínimo esperado."""
+    if not isinstance(questao, dict):
+        raise ValueError(f"{nome}: o conteúdo não é um objeto.")
+    if not isinstance(questao.get("text"), str) or not questao["text"].strip():
+        raise ValueError(f"{nome}: campo 'text' ausente ou inválido.")
+    options = questao.get("options")
+    if not isinstance(options, list) or len(options) != 4:
+        raise ValueError(f"{nome}: deve conter exatamente 4 alternativas.")
+    correct_count = 0
+    for i, option in enumerate(options, 1):
+        if not isinstance(option, dict) or not isinstance(option.get("option"), str):
+            raise ValueError(f"{nome}: alternativa {i} inválida.")
+        if not isinstance(option.get("explanation"), str):
+            raise ValueError(f"{nome}: explicação da alternativa {i} inválida.")
+        if option.get("is_correct") is True:
+            correct_count += 1
+        elif option.get("is_correct") is not False:
+            raise ValueError(f"{nome}: 'is_correct' deve ser true ou false.")
+    if correct_count != 1:
+        raise ValueError(f"{nome}: deve haver exatamente uma alternativa correta.")
+    if not isinstance(questao.get("resolution"), str):
+        raise ValueError(f"{nome}: campo 'resolution' ausente ou inválido.")
+
 
 def substituir_caracteres_unicode(texto):
-    """Substitui caracteres Unicode por equivalentes ASCII"""
+    """Substitui caracteres Unicode por equivalentes ASCII."""
     substituicoes = {
-        '≤': '<=', '≥': '>=', '≠': '!=', '≈': '≈',
+        '≤': '<=', '≥': '>=', '≠': '!=', '≈': '~',
         'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
         'à': 'a', 'è': 'e', 'ì': 'i', 'ò': 'o', 'ù': 'u',
         'â': 'a', 'ê': 'e', 'î': 'i', 'ô': 'o', 'û': 'u',
@@ -86,214 +217,207 @@ def substituir_caracteres_unicode(texto):
         'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U',
         'À': 'A', 'È': 'E', 'Ì': 'I', 'Ò': 'O', 'Ù': 'U',
         'Â': 'A', 'Ê': 'E', 'Î': 'I', 'Ô': 'O', 'Û': 'U',
-        'Ã': 'A', 'Õ': 'O', 'Ç': 'C', 'Ü': 'U'
+        'Ã': 'A', 'Õ': 'O', 'Ç': 'C', 'Ü': 'U',
     }
-    
     for char, replacement in substituicoes.items():
         texto = texto.replace(char, replacement)
-    
     return texto
 
+
 def obter_letra_enumeração(indice):
-    vogais = ['a', 'b', 'c', 'd']
-    return vogais[indice % len(vogais)]
+    return ['A', 'B', 'C', 'D'][indice % 4]
 
-# Geração de questões de múltipla escolha (RAG)
-def generate_mcq_from_context(context: str, topic: str, qnt_questoes: int = 2, temperature: float = 0.5):
-    prompt = f"""
-Você é um especialista altamente competente no(s) tema(s): {topic}.
-Sua tarefa é gerar {qnt_questoes} questões de múltipla escolha de alta qualidade.
 
-📘 **Uso do contexto**
-- O contexto serve como apoio, não como limite.
-- As questões devem ser baseadas nos documentos, mas utilizando toda a sua capacidade de linguagem para gerar perguntas profundas e relevantes sobre o tópico — sem se limitar a copiar ou depender literalmente de trechos dos documentos.
-- Use os documentos apenas como referência conceitual.
-- NÃO cite, mencione ou faça alusão a “documento”, “contexto”, “texto fornecido” ou variações.
-- NÃO introduza temas que não estejam presentes nos documentos fornecidos.
+def salvar_questoes(mcq: dict) -> None:
+    with open(QUESTIONS_PATH, "w", encoding="utf-8") as f:
+        json.dump(mcq, f, ensure_ascii=False, indent=4)
 
-🎯 **Regras de elaboração das questões**
-- Cada questão deve ter exatamente 4 alternativas (A, B, C, D).
-- Apenas UMA alternativa deve ser correta.
-- Varia a posição da resposta correta de forma equilibrada.
-- NÃO crie cenários fictícios, histórias ou situações inventadas.
-- Os enunciados devem ser diretos, técnicos e objetivos.
-- Cada alternativa deve conter explicação objetiva e técnica.
 
-⚠️ **Formato obrigatório**
-Responda APENAS com um JSON válido, sem qualquer texto fora do JSON, seguindo exatamente esta estrutura:
+def _entrada_dict_questions(question: dict) -> dict:
+    correct_opt = next(
+        (o["option"] for o in question.get("options", []) if o.get("is_correct") is True),
+        None,
+    )
+    return {
+        "text": question.get("text", ""),
+        "correct_option": correct_opt,
+        "chosen_option": "",
+        "is_correct": False,
+    }
 
-{{
-    "question 1": {{
-        "text": "Texto da questão",
-        "options": [
-            {{"option": "Alternativa 1", "is_correct": true, "explanation": "Explicação da correta"}},
-            {{"option": "Alternativa 2", "is_correct": false, "explanation": "Explicação da incorreta"}},
-            {{"option": "Alternativa 3", "is_correct": false, "explanation": "Explicação da incorreta"}},
-            {{"option": "Alternativa 4", "is_correct": false, "explanation": "Explicação da incorreta"}}
-        ],
-        "resolution": "Resumo da resolução e raciocínio da questão"
-    }}
-}}
 
-📚 **Documentos de apoio:**
+def registrar_questoes(mcq: dict) -> None:
+    """Reconstrói o dict_questions global a partir do MCQ."""
+    global dict_questions
+    dict_questions = {
+        key: _entrada_dict_questions(q)
+        for key, q in mcq.items()
+        if key != "sources" and isinstance(q, dict)
+    }
+
+
+# ----------------------------------------------------------------------------
+# Geração de questões (uma chamada por questão)
+# ----------------------------------------------------------------------------
+def _prompt_questao(context: str, topic: str, angulo: str, evitar: list) -> str:
+    evitar_txt = ""
+    if evitar:
+        lista = "\n".join(f"- {t[:200]}" for t in evitar)
+        evitar_txt = f"\nNão repita o tema/abordagem destes enunciados:\n{lista}\n"
+
+    return f"""Gere 1 questão de múltipla escolha técnica sobre: {topic}.
+Foco desta questão: {angulo}.
+
+Regras:
+- Use o material abaixo só como referência conceitual; não cite "documento", "contexto" ou "texto".
+- Não invente temas fora do material. Sem cenários fictícios; enunciado direto e objetivo.
+- Exatamente 4 alternativas, apenas 1 correta (coloque a correta como a primeira da lista).
+- Explicação de cada alternativa: no máximo 10 palavras.
+- "resolution": no máximo 15 palavras.
+{evitar_txt}
+Responda SOMENTE com JSON neste formato:
+{{"text": "enunciado", "options": [
+{{"option": "...", "is_correct": true, "explanation": "..."}},
+{{"option": "...", "is_correct": false, "explanation": "..."}},
+{{"option": "...", "is_correct": false, "explanation": "..."}},
+{{"option": "...", "is_correct": false, "explanation": "..."}}],
+"resolution": "..."}}
+
+Material:
 {context}
 """
-    response_text = get_gemini_response(prompt, temperature)
 
-    try:
-        start = response_text.find("{")
-        end = response_text.rfind("}") + 1
-        json_text = response_text[start:end]
-        mcq = json.loads(json_text)
 
-        CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-        QUESTIONS_PATH = os.path.join(CURRENT_DIR, "questions.json")
+def gerar_questao(context: str, topic: str, angulo: str, evitar=None,
+                  temperature: float = 0.5, nome: str = "questão") -> dict:
+    """Gera, valida e embaralha uma questão, com retry."""
+    prompt = _prompt_questao(context, topic, angulo, evitar or [])
+    ultimo_erro = None
 
-        with open(QUESTIONS_PATH, "w", encoding="utf-8") as arquivo:
-            json.dump(mcq, arquivo, ensure_ascii=False, indent=4)
+    for tentativa in range(1, MAX_RETRIES + 1):
+        try:
+            raw = get_ollama_response(
+                prompt, temperature, num_predict=MCQ_NUM_PREDICT, json_mode=True
+            )
+            obj = parse_json_object(raw)
 
-        # Atualiza dict_questions global
-        global dict_questions
-        dict_questions = {}
-        for i, question_key in enumerate(mcq.keys(), 1):
-            if question_key == "sources":
-                continue
+            # Aceita {"text": ...} ou {"question 1": {...}}
+            if "text" not in obj:
+                dicts = [v for v in obj.values() if isinstance(v, dict)]
+                if len(dicts) == 1:
+                    obj = dicts[0]
 
-            question = mcq[question_key]
-            correct_opt = None
-            for opt in question.get("options", []):
-                if opt.get("is_correct", False):
-                    correct_opt = opt["option"]
-                    break
+            validar_questao(obj, nome)
+            random.shuffle(obj["options"])  # posição da correta balanceada
+            return obj
+        except HTTPException:
+            raise
+        except Exception as e:
+            ultimo_erro = e
+            print(f"⚠️ {nome}: tentativa {tentativa} falhou: {e}")
 
-            dict_questions[question_key] = {
-                "text": question["text"],
-                "correct_option": correct_opt,
-                "chosen_option": "",
-                "is_correct": False
-            }
+    raise HTTPException(
+        status_code=502,
+        detail=f"{nome}: não foi possível gerar uma questão válida "
+               f"({type(ultimo_erro).__name__}: {ultimo_erro})",
+    )
 
-        return mcq
 
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao decodificar JSON do Gemini: {str(e)}\nResposta bruta:\n{response_text}"
-        )
+def _contexto_para_questao(docs: list, i: int) -> str:
+    """Seleciona chunks rotativos para cada questão, gerando diversidade."""
+    n = len(docs)
+    k = min(CHUNKS_PER_QUESTION, n)
+    return format_docs([docs[(i * k + j) % n] for j in range(k)])
 
-def substitute_question(original_mcq: dict, question_number: str, topic: str, temperature: float = 0.5):
-    """Substitui a questão escolhida por uma nova questão gerada."""
-    
+
+def _buscar_docs(topic: str, qnt_questoes: int) -> list:
+    if db is None:
+        raise HTTPException(status_code=500, detail="Banco vetorial não inicializado.")
+    k = min(12, max(4, qnt_questoes * CHUNKS_PER_QUESTION))
+    docs = db.similarity_search(topic, k=k)
+    if not docs:
+        raise HTTPException(status_code=404, detail="Nenhum documento relevante encontrado.")
+    return docs
+
+
+def _tarefa_questao(docs: list, topic: str, i: int, temperature: float):
+    nome = f"question {i + 1}"
+    q = gerar_questao(
+        context=_contexto_para_questao(docs, i),
+        topic=topic,
+        angulo=ANGULOS[i % len(ANGULOS)],
+        temperature=temperature,
+        nome=nome,
+    )
+    return nome, q
+
+
+def generate_mcq_from_docs(docs: list, topic: str, qnt_questoes: int,
+                           temperature: float = 0.5) -> dict:
+    """Gera N questões e devolve {"question 1": {...}, ...}."""
+    workers = max(1, min(MCQ_WORKERS, qnt_questoes))
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        resultados = list(pool.map(
+            lambda i: _tarefa_questao(docs, topic, i, temperature),
+            range(qnt_questoes),
+        ))
+    return dict(resultados)
+
+
+def substitute_question(original_mcq: dict, question_number: str, topic: str,
+                        temperature: float = 0.6):
+    """Substitui a questão escolhida por uma nova."""
     if not db:
         raise HTTPException(status_code=500, detail="Banco vetorial não inicializado.")
-    
-    relevant_docs = db.similarity_search(topic, k=8)
-    if not relevant_docs:
+
+    docs = db.similarity_search(topic, k=8)
+    if not docs:
         raise HTTPException(status_code=404, detail="Nenhum documento relevante encontrado.")
-    
-    context = format_docs(relevant_docs)
 
-    prompt = f"""
-Você é um especialista altamente competente no tema: {topic}.
+    random.shuffle(docs)
 
-Sua tarefa é gerar uma NOVA questão de múltipla escolha de alta qualidade para substituir a questão existente, mantendo o mesmo padrão de profundidade e qualidade das demais questões.
+    evitar = [
+        q["text"] for q in original_mcq.values()
+        if isinstance(q, dict) and isinstance(q.get("text"), str)  # inclui a original
+    ]
 
-⚠️ **REGRA CRÍTICA DE DIFERENCIAÇÃO**
-- A nova questão deve ser DIFERENTE e ORIGINAL em relação a todas as questões já existentes.
-- NÃO repita o mesmo tema, enfoque, estrutura ou abordagem das questões listadas abaixo.
-- Crie uma questão sobre um aspecto diferente do tópico ou com um ângulo distinto de análise.
+    nova = gerar_questao(
+        context=format_docs(docs[:CHUNKS_PER_QUESTION]),
+        topic=topic,
+        angulo=random.choice(ANGULOS),
+        evitar=evitar,
+        temperature=temperature,
+        nome=question_number,
+    )
 
-📘 **Uso do contexto**
-- O contexto serve como apoio, não como limite.
-- A questão deve ser baseada nos documentos, mas utilizando toda a sua capacidade de linguagem para gerar uma pergunta profunda e relevante sobre o tópico — sem se limitar a copiar ou depender literalmente de trechos dos documentos.
-- Use os documentos apenas como referência conceitual.
-- NÃO cite, mencione ou faça alusão a “documento”, “contexto”, “texto fornecido” ou variações.
-- NÃO introduza temas que não estejam presentes nos documentos fornecidos.
-
-🎯 **Regras de elaboração da questão**
-- A questão deve ter exatamente 4 alternativas (A, B, C, D).
-- Apenas UMA alternativa deve ser correta.
-- Varia a posição da resposta correta em relação às outras questões (evite padrões previsíveis).
-- NÃO crie cenários fictícios, histórias, personagens, empresas imaginárias ou situações inventadas.
-- O enunciado deve ser direto, técnico e objetivo, sem contextualizações narrativas.
-- Cada alternativa deve:
-  - ser autossuficiente e específica;
-  - indicar claramente se é correta ou incorreta;
-  - conter explicação objetiva e técnica do motivo.
-- A questão deve avaliar raciocínio, interpretação e aplicação prática — não apenas memorização.
-
-⚠️ **Formato obrigatório**
-Responda APENAS com um JSON válido, sem qualquer texto fora do JSON, seguindo exatamente esta estrutura:
-
-{{
-    "{question_number}": {{
-        "text": "Texto da nova questão (deve ser completamente diferente da questão original e das outras existentes)",
-        "options": [
-            {{"option": "Alternativa 1", "is_correct": true/false, "explanation": "Explicação técnica objetiva"}},
-            {{"option": "Alternativa 2", "is_correct": true/false, "explanation": "Explicação técnica objetiva"}},
-            {{"option": "Alternativa 3", "is_correct": true/false, "explanation": "Explicação técnica objetiva"}},
-            {{"option": "Alternativa 4", "is_correct": true/false, "explanation": "Explicação técnica objetiva"}}
-        ],
-        "resolution": "Resumo da resolução e raciocínio da questão, explicando por que a alternativa correta é a melhor e como as incorretas se desviam do conceito correto"
-    }}
-}}
-
-📋 **QUESTÃO ORIGINAL (que será substituída):**
-{json.dumps(original_mcq.get(question_number, {}), ensure_ascii=False, indent=2)}
-
-📚 **OUTRAS QUESTÕES EXISTENTES (evite repetir temas/abordagens):**
-{json.dumps({k: v for k, v in original_mcq.items() if k != question_number}, ensure_ascii=False, indent=2)}
-
-📖 **Documentos de apoio para criar a NOVA questão:**
-{context}
-
-IMPORTANTE: A nova questão deve ser tão rica, complexa e bem fundamentada quanto as questões existentes, mas abordando um aspecto diferente do tópico ou utilizando um ângulo de análise distinto.
-"""
-    response_text = get_gemini_response(prompt, temperature)
-
-    try:
-        start = response_text.find("{")
-        end = response_text.rfind("}") + 1
-        json_text = response_text[start:end]
-        new_question = json.loads(json_text)
-    except:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao decodificar JSON da nova questão.\nResposta bruta:\n{response_text}"
-        )
-    
-    # substitui somente a questão escolhida
-    original_mcq[question_number] = new_question[question_number]
-
+    original_mcq[question_number] = nova
     return original_mcq
 
-# Criação do pdf
+
+# ----------------------------------------------------------------------------
+# PDF
+# ----------------------------------------------------------------------------
 def create_PDF(exame):
     pdf = FPDF()
     pdf.add_page()
-
     pdf.set_auto_page_break(auto=True, margin=15)
 
-    CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
     pdf_path = os.path.join(CURRENT_DIR, "prova_ExamForge.pdf")
 
-    for i, question_key in enumerate(exame.keys(), 1):
-        question = exame[question_key]
-        
+    questoes = [q for k, q in exame.items() if k != "sources" and isinstance(q, dict)]
+
+    for i, question in enumerate(questoes, 1):
         pdf.set_font("Arial", 'B', 14)
         pdf.set_text_color(0, 0, 128)
         pdf.cell(0, 15, f"Questão {i}:", 0, 1)
 
         pdf.set_font("Arial", size=12)
         pdf.set_text_color(0, 0, 0)
-        text = substituir_caracteres_unicode(question['text'])
-        pdf.multi_cell(0, 8, text, 0, 1)
+        pdf.multi_cell(0, 8, substituir_caracteres_unicode(question['text']), 0, 1)
         pdf.ln(5)
 
         pdf.set_font("Arial", size=11)
-        options = question['options']
-        
-        for j, option in enumerate(options):
+        for j, option in enumerate(question['options']):
             letra = obter_letra_enumeração(j)
             text = substituir_caracteres_unicode(option['option'])
             pdf.cell(10, 10, f"({letra})", 0, 0)
@@ -307,69 +431,46 @@ def create_PDF(exame):
     pdf.output(pdf_path)
     return pdf_path
 
-# Feedback final do simulado
+
+# ----------------------------------------------------------------------------
+# Feedback final
+# ----------------------------------------------------------------------------
 def generate_feedback(dict_responses: dict, temperature: float = 0.5):
+    resumo = [
+        {"questao": v["text"], "acertou": v["is_correct"]}
+        for v in dict_responses.values()
+    ]
 
-    prompt = f"""
-Você é um avaliador educacional IA. Analise o desempenho do aluno no exame e gere um feedback claro, direto e bem formatado, seguindo exatamente o formato abaixo.
+    prompt = f"""Você é um avaliador educacional. Analise o desempenho do aluno e gere um feedback curto.
 
-**Dados do Exame:**
-{json.dumps(dict_responses, ensure_ascii=False, indent=2)}
+Dados:
+{json.dumps(resumo, ensure_ascii=False)}
 
-**Objetivo:**
-Produzir um texto único que:
-- Identifique claramente os conceitos/tópicos que o aluno domina
-- Identifique claramente os conceitos/tópicos que o aluno precisa melhorar (quando houver)
-- Traga recomendações diretas e objetivas com base nas dificuldades apresentadas
-- Respeite rigorosamente a formatação e as quebras de linha solicitadas
+Formato EXATO (use a sequência literal \\n entre as linhas, sem listas ou bullets):
 
-**Estrutura EXATA que você deve seguir (incluindo quebras de linha):**
+Com base nas suas respostas, percebi que você precisa reforçar seus estudos em **<áreas que errou>**.\\nVocê demonstrou dificuldade em **<conceitos específicos que errou>**.\\n**Sugestão**: <recomendação prática>.\\nIsso vai ajudar a melhorar seu desempenho nesses pontos.
 
-Com base nas suas respostas, percebi que você precisa reforçar seus estudos em **<áreas que o aluno errou>**.\n
-Você demonstrou dificuldade em **<conceitos ou tópicos específicos que o aluno errou>**.\n
-**Sugestão**: <recomendação direta e prática do que estudar>.\n
-Isso vai ajudar a melhorar seu desempenho nesses pontos.
+Se o aluno acertou a maioria e não há dificuldades reais, use:
+"No momento, você não precisa reforçar nenhuma área específica, pois demonstrou excelente domínio dos conteúdos avaliados.\\nVocê não apresentou dificuldades relevantes neste exame.\\n**Sugestão**: continue aprofundando seus conhecimentos e explorando tópicos mais avançados.\\nIsso vai ajudar a manter seu alto desempenho."
 
-Caso o aluno tenha acertado a maioria das questões e NÃO haja áreas reais de dificuldade, você DEVE adaptar a estrutura para evitar frases artificiais como “nenhuma área” ou “nenhum conceito”. Nesse caso, siga estas substituições obrigatórias:
-
-- Troque:  
-  "você precisa reforçar seus estudos em **<áreas>**"  
-  por:  
-  "No momento, você não precisa reforçar nenhuma área específica, pois demonstrou excelente domínio dos conteúdos avaliados."
-
-- Troque:  
-  "Você demonstrou dificuldade em **<tópicos>**"  
-  por:  
-  "Você não apresentou dificuldades relevantes neste exame."
-
-- A recomendação deve ser positiva, como:  
-  "**Sugestão**: continue aprofundando seus conhecimentos e explorando tópicos mais avançados para manter seu alto desempenho."
-
-**Regras obrigatórias:**
-- Sempre manter as quebras de linha usando exatamente `\\n`.
-- NÃO transformar o texto em bloco único.
-- NÃO usar listas, tópicos ou bullets.
-- O texto final deve ser fluido, com as quebras de linha como separadores.
-- Use apenas tópicos presentes nos dados do exame — nunca invente.
-- Se o aluno acertar vários itens, incluir a frase:
-  "Você demonstrou domínio em **<tópicos que acertou>**."  
-  sempre com quebra de linha antes ou depois, seguindo o texto.
-- A saída final deve conter apenas o texto formatado, nenhuma explicação adicional.
-
-Agora gere o feedback formatado exatamente conforme instruído.
+Se acertou vários itens, inclua antes da sugestão: "Você demonstrou domínio em **<tópicos que acertou>**.\\n"
+Use apenas tópicos presentes nos dados. Responda só com o texto final.
 """
+    return get_ollama_response(prompt, temperature, num_predict=400)
 
-    response_text = get_gemini_response(prompt, temperature)
-    return response_text
 
+# ----------------------------------------------------------------------------
 # Modelos de requisição
+# ----------------------------------------------------------------------------
 class MCQRequest(BaseModel):
     topic: str
     qnt_questoes: int
 
+
 class CheckAnswerRequest(BaseModel):
-    question_data: dict  # JSON da questão gerada pelo /generate_mcq/
+    question_data: dict
     chosen_option: str
+
 
 class SubstituteQuestionRequest(BaseModel):
     original_mcq: dict
@@ -377,68 +478,100 @@ class SubstituteQuestionRequest(BaseModel):
     topic: str
 
 
+# ----------------------------------------------------------------------------
 # Endpoints
+# ----------------------------------------------------------------------------
+def _validar_qnt(qnt: int):
+    if qnt < 1 or qnt > 10:
+        raise HTTPException(
+            status_code=400,
+            detail="A quantidade de questões deve estar entre 1 e 10.",
+        )
+
+
 @router.post("/generate_mcq/")
 def generate_mcq(data: MCQRequest):
-    """Gera questões de múltipla escolha baseadas no tema informado."""    
-    
-    if not db:
-        return JSONResponse(status_code=500, content={"error": "Banco vetorial não inicializado."})
+    """Gera questões de múltipla escolha (resposta única, ao final)."""
+    try:
+        _validar_qnt(data.qnt_questoes)
+        relevant_docs = _buscar_docs(data.topic, data.qnt_questoes)
 
-    relevant_docs = db.similarity_search(data.topic, k=8)
-    if not relevant_docs:
-        return JSONResponse(status_code=404, content={"error": "Nenhum documento relevante encontrado."})
+        mcq = generate_mcq_from_docs(
+            docs=relevant_docs,
+            topic=data.topic,
+            qnt_questoes=data.qnt_questoes,
+            temperature=0.5,
+        )
 
-    context = format_docs(relevant_docs)
-    
-    # Reseta dict_questions para novo exame
-    dict_questions = {}
-    
-    mcq = generate_mcq_from_context(
-        context=context,
-        topic=data.topic,
-        qnt_questoes=data.qnt_questoes, 
-        temperature=0.5
-    )
+        salvar_questoes(mcq)
+        registrar_questoes(mcq)
 
-    # Inicializa dict_questions com a estrutura correta
-    for i, question_key in enumerate(mcq.keys(), 1):
-        if question_key == "sources":
-            continue
-            
-        question = mcq[question_key]
-        correct_opt = None
-        
-        for opt in question.get("options", []):
-            if opt.get("is_correct", False):
-                correct_opt = opt["option"]
-                break
-        
-        dict_questions[question_key] = {
-            "text": question["text"],
-            "correct_option": correct_opt,
-            "chosen_option": "",
-            "is_correct": False
-        }
-    
-    # Adiciona fontes ao JSON retornado
-    mcq["sources"] = [doc.metadata.get("source", "Desconhecida") for doc in relevant_docs]
+        mcq["sources"] = list(dict.fromkeys(
+            doc.metadata.get("source", "Desconhecida") for doc in relevant_docs
+        ))
+        return mcq
 
-    return mcq
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao gerar questões: {type(e).__name__}: {e}",
+        )
+
+
+@router.post("/generate_mcq_stream/")
+def generate_mcq_stream(data: MCQRequest):
+    """Gera questões e envia cada uma (NDJSON) assim que fica pronta.
+
+    Cada linha é um JSON: {"question N": {...}}, {"error": "..."} ou, por último,
+    {"sources": [...]}.
+    """
+    _validar_qnt(data.qnt_questoes)
+    docs = _buscar_docs(data.topic, data.qnt_questoes)
+    fontes = list(dict.fromkeys(d.metadata.get("source", "Desconhecida") for d in docs))
+
+    def linha(obj: dict) -> str:
+        return json.dumps(obj, ensure_ascii=False) + "\n"
+
+    def stream():
+        coletadas = {}
+        workers = max(1, min(MCQ_WORKERS, data.qnt_questoes))
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futuros = {
+                pool.submit(_tarefa_questao, docs, data.topic, i, 0.5): f"question {i + 1}"
+                for i in range(data.qnt_questoes)
+            }
+            for fut in as_completed(futuros):
+                nome = futuros[fut]
+                try:
+                    _, q = fut.result()
+                    coletadas[nome] = q
+                    yield linha({nome: q})
+                except Exception as e:
+                    detalhe = getattr(e, "detail", str(e))
+                    yield linha({"error": f"{nome}: {detalhe}"})
+
+        if coletadas:
+            ordenado = dict(sorted(coletadas.items(), key=lambda kv: int(kv[0].split()[1])))
+            salvar_questoes(ordenado)
+            registrar_questoes(ordenado)
+        yield linha({"sources": fontes})
+
+    return StreamingResponse(stream(), media_type="application/x-ndjson")
+
 
 @router.post("/check_answer/")
 def check_answer(data: CheckAnswerRequest):
     """Verifica se a resposta do aluno está correta."""
-    global dict_questions
-    
     question_data = data.question_data
     chosen = data.chosen_option.strip()
-    
+
     correct_option = None
     explanation_correct = ""
     explanation_chosen = ""
 
-    # Procura a alternativa correta e a escolhida
     for opt in question_data.get("options", []):
         opt_text = opt["option"].strip()
         if opt.get("is_correct", False):
@@ -446,10 +579,9 @@ def check_answer(data: CheckAnswerRequest):
             explanation_correct = opt.get("explanation", "Explicação não disponível.")
         if opt_text.lower() == chosen.lower():
             explanation_chosen = opt.get("explanation", "Explicação não disponível.")
-    
-    is_correct = chosen.lower() == (correct_option or "").lower() if correct_option else False
 
-    # Atualiza dict_questions com a resposta do aluno
+    is_correct = bool(correct_option) and chosen.lower() == correct_option.lower()
+
     for key in dict_questions:
         if dict_questions[key]["text"] == question_data.get("text"):
             dict_questions[key]["chosen_option"] = chosen
@@ -461,96 +593,65 @@ def check_answer(data: CheckAnswerRequest):
             "is_correct": True,
             "chosen_option": chosen,
             "message": "✅ Está correto!",
-            "explanation": explanation_chosen
+            "explanation": explanation_chosen,
         }
-    else:
-        return {
-            "is_correct": False,
-            "chosen_option": chosen,
-            "message": "❌ Está incorreto.",
-            "explanation_chosen": explanation_chosen,
-            "correct_option": correct_option,
-            "explanation_correct": explanation_correct
-        }
+    return {
+        "is_correct": False,
+        "chosen_option": chosen,
+        "message": "❌ Está incorreto.",
+        "explanation_chosen": explanation_chosen,
+        "correct_option": correct_option,
+        "explanation_correct": explanation_correct,
+    }
+
 
 @router.post("/substitute_question/")
 def substitute_question_endpoint(data: SubstituteQuestionRequest):
     """Substitui uma questão específica por uma nova e salva no questions.json."""
-    global dict_questions
-    
     updated = substitute_question(
         original_mcq=data.original_mcq,
         question_number=data.question_number,
         topic=data.topic,
     )
-    
-    # Salva no arquivo JSON
-    CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-    QUESTIONS_PATH = os.path.join(CURRENT_DIR, "questions.json")
-    
-    with open(QUESTIONS_PATH, "w", encoding="utf-8") as arquivo:
-        json.dump(updated, arquivo, ensure_ascii=False, indent=4)
-    
-    # Atualiza o dict_questions com a nova questão
-    new_question_data = updated[data.question_number]
-    
-    # Encontra a alternativa correta
-    correct_opt = None
-    for opt in new_question_data.get("options", []):
-        if opt.get("is_correct", False):
-            correct_opt = opt["option"]
-            break
-    
-    # Atualiza o dicionário global
-    dict_questions[data.question_number] = {
-        "text": new_question_data["text"],
-        "correct_option": correct_opt,
-        "chosen_option": "",
-        "is_correct": False
-    }
-    
+
+    salvar_questoes(updated)
+    dict_questions[data.question_number] = _entrada_dict_questions(updated[data.question_number])
+
     return updated
+
 
 @router.post("/generate_PDF/")
 async def generate_PDF():
     """Gera PDF com as questões do exame."""
     try:
-        CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-        QUESTIONS_PATH = os.path.join(CURRENT_DIR, "questions.json")
-
         if not os.path.exists(QUESTIONS_PATH):
             return JSONResponse(
-                status_code=404, 
-                content={"status": "error", "message": "Arquivo questions.json não encontrado"}
+                status_code=404,
+                content={"status": "error", "message": "Arquivo questions.json não encontrado"},
             )
 
         with open(QUESTIONS_PATH, "r", encoding="utf-8") as arquivo:
             exame = json.load(arquivo)
 
         result = create_PDF(exame)
-
         return FileResponse(result, media_type='application/pdf', filename="ExamForge.pdf")
 
     except Exception as e:
         return JSONResponse(
             status_code=500,
-            content={"status": "error", "message": f"Erro ao gerar PDF: {str(e)}"}
+            content={"status": "error", "message": f"Erro ao gerar PDF: {e}"},
         )
+
 
 @router.post("/final_evaluation")
 def final_evaluation():
     """Gera feedback final baseado nas respostas do aluno."""
     if not dict_questions:
-        return JSONResponse(
-            status_code=400,
-            content={"error": "Nenhum exame foi respondido ainda"}
-        )
-    
+        return JSONResponse(status_code=400, content={"error": "Nenhum exame foi respondido ainda"})
+
     feedback = generate_feedback(dict_questions)
-    return {
-        "feedback": feedback,
-        "respostas": dict_questions
-    }
+    return {"feedback": feedback, "respostas": dict_questions}
+
 
 @router.get("/status/")
 def status():
@@ -564,5 +665,5 @@ def status():
         "status": "ok",
         "docs": num_docs,
         "collection": COLLECTION_NAME,
-        "model": "gemini-2.5-flash"
+        "model": f"{OLLAMA_MODEL} (Ollama local)",
     }
